@@ -49,9 +49,23 @@ class DualWriteRegArray:
         ]
         self._index_literals = [Bits(self.addr_bits)(idx) for idx in range(depth)]
 
-    def operate(
+    def read_ports(
         self,
-        read_addrs: Sequence[Value],
+        read_addrs: Sequence[Value]
+    ) -> DualWriteReadResult:
+        """Compute the read-port values without mutating state."""
+
+        self._validate_read_port_count(read_addrs)
+
+        read_values = []
+        for addr in read_addrs:
+            value = self._read_mux(addr)
+            read_values.append(value)
+
+        return DualWriteReadResult(values=tuple(read_values))
+
+    def write_ports(
+        self,
         *,
         write0_enable: Value,
         write0_addr: Value,
@@ -59,24 +73,8 @@ class DualWriteRegArray:
         write1_enable: Value,
         write1_addr: Value,
         write1_data: Value,
-        bypass_reads: bool | None = None,
-    ) -> DualWriteReadResult:
-        """Apply two writes (if enabled) and read out the requested registers."""
-
-        if len(read_addrs) != self.num_read_ports:
-            raise ValueError(
-                f"Expected {self.num_read_ports} read addresses, got {len(read_addrs)}."
-            )
-
-        bypass = self._default_bypass if bypass_reads is None else bypass_reads
-
-        read_values = []
-        for addr in read_addrs:
-            value = self._read_mux(addr)
-            if bypass:
-                value = self._apply_bypass(addr, value, write0_enable, write0_addr, write0_data)
-                value = self._apply_bypass(addr, value, write1_enable, write1_addr, write1_data)
-            read_values.append(value)
+    ) -> None:
+        """Apply the write ports for the current cycle."""
 
         both_fire = write0_enable & write1_enable
         with Condition(both_fire):
@@ -91,7 +89,12 @@ class DualWriteRegArray:
             write1_data=write1_data,
         )
 
-        return DualWriteReadResult(values=tuple(read_values))
+
+    def _validate_read_port_count(self, read_addrs: Sequence[Value]) -> None:
+        if len(read_addrs) != self.num_read_ports:
+            raise ValueError(
+                f"Expected {self.num_read_ports} read addresses, got {len(read_addrs)}."
+            )
 
     def _commit_writes(
         self,
@@ -122,14 +125,3 @@ class DualWriteRegArray:
             match = addr == literal
             value = match.select(self._storage[idx][0], value)
         return value
-
-    @staticmethod
-    def _apply_bypass(
-        addr: Value,
-        current_value: Value,
-        write_enable: Value,
-        write_addr: Value,
-        write_data: Value,
-    ) -> Value:
-        hit = write_enable & (write_addr == addr)
-        return hit.select(write_data, current_value)

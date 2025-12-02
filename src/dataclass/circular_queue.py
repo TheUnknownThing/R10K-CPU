@@ -2,8 +2,19 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from typing import Callable
 
 from assassyn.frontend import *
+
+
+@dataclass
+class CircularQueueSelection:
+    """Metadata for the first queue element satisfying a selector."""
+
+    data: Value
+    index: Value
+    distance: Value
+    valid: Value
 
 
 @dataclass
@@ -28,11 +39,13 @@ class CircularQueue:
         *,
         initializer: list[int] | None = None,
         name: str | None = None,
+        selector: Callable[[Value], Value]
     ) -> None:
         if depth <= 0:
             raise ValueError("Queue depth must be positive.")
         self.depth = depth
         self.name = name or "circular_queue"
+        self.selector = selector
         self.addr_bits = max(1, math.ceil(math.log2(depth)))
         self.count_bits = max(1, math.ceil(math.log2(depth + 1)))
         if initializer is None:
@@ -51,6 +64,9 @@ class CircularQueue:
         self._one_addr = UInt(self.addr_bits)(1)
         self._one_count = UInt(self.count_bits)(1)
         self._count_full = Bits(self.count_bits)(depth)
+        self._zero_addr = Bits(self.addr_bits)(0)
+        self._zero_count = Bits(self.count_bits)(0)
+        self._zero_element = element_shape(0)
 
     def operate(
         self,
@@ -63,15 +79,13 @@ class CircularQueue:
 
         empty = self._count[0] == Bits(self.count_bits)(0)
         full = self._count[0] == self._count_full
-        read_valid = ~empty
-        write_ready = ~full
-
-        assume(~(read_enable & ~read_valid))
-        assume(~(write_enable & ~write_ready))
+        
+        assume(~(read_enable & empty))
+        assume(~(write_enable & full))
 
         read_data = self._storage[self._head[0]]
 
-        with Condition(read_enable):
+        with Condition(write_enable):
             self._storage[self._tail[0]] = write_data
 
         next_head = self._increment_pointer(self._head[0])
@@ -93,12 +107,19 @@ class CircularQueue:
 
         return CircularQueueView(
             read_data=read_data,
-            read_valid=read_valid,
-            write_ready=write_ready,
+            read_valid=~empty,
+            write_ready=~full,
             empty=empty,
             full=full,
             count=self._count[0],
         )
+    
+    def select(
+            self,
+    ) -> CircularQueueSelection:
+        """Select the first queue element satisfying a selector without modifying state."""
+
+        return self._select_first()
 
     def _increment_pointer(self, pointer: Value) -> Value:
         pointer_uint = pointer.bitcast(UInt(self.addr_bits))
@@ -106,3 +127,38 @@ class CircularQueue:
         incremented = pointer_uint + self._one_addr
         next_value = wrapped.select(UInt(self.addr_bits)(0), incremented)
         return next_value.bitcast(Bits(self.addr_bits))
+
+    def _select_first(self) -> CircularQueueSelection:
+        selected_data = self._zero_element
+        selected_index = self._zero_addr
+        selected_distance = self._zero_count
+        selected_valid = Bits(1)(0)
+
+        pointer = self._head[0]
+        distance = self._zero_count
+        count_uint = self._count[0].bitcast(UInt(self.count_bits))
+
+        for offset in range(self.depth):
+            offset_uint = UInt(self.count_bits)(offset)
+            has_entry = offset_uint < count_uint
+            value = self._storage[pointer]
+            matches = self.selector(value)
+            candidate_valid = has_entry & matches
+            new_hit = candidate_valid & ~selected_valid
+
+            selected_data = new_hit.select(value, selected_data)
+            selected_index = new_hit.select(pointer, selected_index)
+            selected_distance = new_hit.select(distance, selected_distance)
+            selected_valid = selected_valid | candidate_valid
+
+            pointer = self._increment_pointer(pointer)
+            distance_uint = distance.bitcast(UInt(self.count_bits))
+            incremented_distance = (distance_uint + self._one_count).bitcast(Bits(self.count_bits))
+            distance = incremented_distance
+
+        return CircularQueueSelection(
+            data=selected_data,
+            index=selected_index,
+            distance=selected_distance,
+            valid=selected_valid,
+        )
