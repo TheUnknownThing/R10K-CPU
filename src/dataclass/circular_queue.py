@@ -112,8 +112,8 @@ class CircularQueue:
             count=self._count[0],
         )
 
-    def select(self , selector: Callable[[Value], Value]) -> CircularQueueSelection:
-        """Select the first element in the queue matching the given selector."""
+    def choose(self , selector: Callable[[Value], Value]) -> CircularQueueSelection:
+        """Choose the first element in the queue matching the given selector."""
         selected_data = self._zero_element
         selected_index = self._zero_addr
         selected_distance = self._zero
@@ -127,7 +127,7 @@ class CircularQueue:
             offset_uint = UInt(self.count_bits)(offset)
             has_entry = offset_uint < count_uint
             value = self._storage[pointer]
-            matches = selector(value)
+            matches = selector(value).bitcast(Bits(1))
             candidate_valid = has_entry & matches
             new_hit = candidate_valid & ~selected_valid
 

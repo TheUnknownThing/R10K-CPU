@@ -1,6 +1,7 @@
 from assassyn.frontend import Bits, Record
 from .config import data_depth
 
+# TODO: This is subject to change based on design
 
 rob_entry = Record(
     valid=Bits(1),
