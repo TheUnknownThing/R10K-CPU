@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from typing import Callable
 
 from assassyn.frontend import *
+from assassyn.ir.dtype import RecordValue
+from assassyn.ir.array import ArrayRead
 
 
 @dataclass
@@ -17,20 +19,8 @@ class CircularQueueSelection:
     valid: Value
 
 
-@dataclass
-class CircularQueueView:
-    """Lightweight bundle describing the observable queue signals."""
-
-    read_data: Value
-    read_valid: Value
-    write_ready: Value
-    empty: Value
-    full: Value
-    count: Value
-
-
 class CircularQueue:
-    """Single-read, single-write circular queue built on top of RegArray."""
+    """Single-push, single-pop, multi-modify circular queue built on top of RegArray."""
 
     def __init__(
         self,
@@ -49,9 +39,7 @@ class CircularQueue:
         if initializer is None:
             initializer = [0] * depth
         elif len(initializer) != depth:
-            raise ValueError(
-                f"Queue initializer length {len(initializer)} does not match depth {depth}."
-            )
+            raise ValueError(f"Queue initializer length {len(initializer)} does not match depth {depth}.")
 
         self._element_shape = element_shape
         self._storage = RegArray(element_shape, depth, initializer=initializer)
@@ -64,55 +52,66 @@ class CircularQueue:
         self._count_full = Bits(self.count_bits)(depth)
         self._zero_addr = Bits(self.addr_bits)(0)
         self._zero = Bits(self.count_bits)(0)
-        self._zero_element = element_shape(0)
+        self._zero_element = element_shape(0)  # pyright: ignore[reportCallIssue]
+
+    def is_full(self) -> Value:
+        return self._count[0] == self._count_full
+
+    def is_empty(self) -> Value:
+        return self._count[0] == Bits(self.count_bits)(0)
+
+    def count(self) -> Value:
+        return self._count[0]
+
+    def __getitem__(self, index: int | Value) -> ArrayRead:
+        return self._storage.__getitem__(index)
+
+    def __setitem__(self, index: int | Value, value):
+        return self._storage.__setitem__(index, value)
+
+    def front(self) -> Value:
+        return self._storage[self._head[0]]
 
     def operate(
         self,
         *,
-        write_enable: Value,
-        write_data: Value,
-        read_enable: Value,
-    ) -> CircularQueueView:
+        push_enable: Value,
+        push_data: Value | RecordValue,
+        pop_enable: Value,
+    ) -> Value:
         """Drive the queue for a single cycle and expose its handshake signals."""
 
-        empty = self._count[0] == Bits(self.count_bits)(0)
-        full = self._count[0] == self._count_full
-        
-        assume(~(read_enable & empty))
-        assume(~(write_enable & full))
+        empty = self.is_empty()
+        full = self.is_full()
 
-        read_data = self._storage[self._head[0]]
+        assume(~(pop_enable & empty))
+        assume(~(push_enable & full))
 
-        with Condition(write_enable):
-            self._storage[self._tail[0]] = write_data
+        pop_data = self._storage[self._head[0]]
+
+        with Condition(push_enable):
+            self._storage[self._tail[0]] = push_data
 
         next_head = self._increment_pointer(self._head[0])
         next_tail = self._increment_pointer(self._tail[0])
 
-        with Condition(read_enable):
+        with Condition(pop_enable):
             self._head[0] = next_head
-        with Condition(write_enable):
+        with Condition(push_enable):
             self._tail[0] = next_tail
 
         count_uint = self._count[0].bitcast(UInt(self.count_bits))
         inc_value = (count_uint + self._one).bitcast(Bits(self.count_bits))
         dec_value = (count_uint - self._one).bitcast(Bits(self.count_bits))
 
-        with Condition(write_enable & ~read_enable):
+        with Condition(push_enable & ~pop_enable):
             self._count[0] = inc_value
-        with Condition(read_enable & ~write_enable):
+        with Condition(pop_enable & ~push_enable):
             self._count[0] = dec_value
 
-        return CircularQueueView(
-            read_data=read_data,
-            read_valid=~empty,
-            write_ready=~full,
-            empty=empty,
-            full=full,
-            count=self._count[0],
-        )
+        return pop_data
 
-    def choose(self , selector: Callable[[Value], Value]) -> CircularQueueSelection:
+    def choose(self, selector: Callable[[Value], Value]) -> CircularQueueSelection:
         """Choose the first element in the queue matching the given selector."""
         selected_data = self._zero_element
         selected_index = self._zero_addr
@@ -148,12 +147,9 @@ class CircularQueue:
             valid=selected_valid,
         )
 
-
     def _increment_pointer(self, pointer: Value) -> Value:
         pointer_uint = pointer.bitcast(UInt(self.addr_bits))
         wrapped = pointer_uint == self._last_index
         incremented = pointer_uint + self._one_addr
         next_value = wrapped.select(UInt(self.addr_bits)(0), incremented)
         return next_value.bitcast(Bits(self.addr_bits))
-
-    
