@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Callable
+from typing import Any, Callable
 
 from assassyn.frontend import *
 from assassyn.ir.dtype import RecordValue
@@ -13,7 +13,7 @@ from assassyn.ir.array import ArrayRead
 class CircularQueueSelection:
     """Metadata for the first queue element satisfying a selector."""
 
-    data: Value
+    data: Any
     index: Value
     distance: Value
     valid: Value
@@ -24,7 +24,7 @@ class CircularQueue:
 
     def __init__(
         self,
-        element_shape: DType,
+        dtype: DType,
         depth: int,
         *,
         initializer: list[int] | None = None,
@@ -41,12 +41,12 @@ class CircularQueue:
         elif len(initializer) != depth:
             raise ValueError(f"Queue initializer length {len(initializer)} does not match depth {depth}.")
 
-        self._element_shape = element_shape
-        self._storage = RegArray(element_shape, depth, initializer=initializer)
+        self._dtype = dtype
+        self._storage = RegArray(dtype, depth, initializer=initializer)
         self._head = RegArray(Bits(self.addr_bits), 1, initializer=[0])
         self._tail = RegArray(Bits(self.addr_bits), 1, initializer=[0])
         self._count = RegArray(Bits(self.count_bits), 1, initializer=[0])
-        
+
         self._last_index = UInt(self.addr_bits)(depth - 1)
         self._one_addr = UInt(self.addr_bits)(1)
         self._one = UInt(self.count_bits)(1)
@@ -69,7 +69,7 @@ class CircularQueue:
     def __setitem__(self, index: int | Value, value):
         return self._storage.__setitem__(index, value)
 
-    def front(self) -> Value:
+    def front(self) -> ArrayRead:
         return self._storage[self._head[0]]
 
     def operate(
@@ -78,7 +78,7 @@ class CircularQueue:
         push_enable: Value,
         push_data: Value | RecordValue,
         pop_enable: Value,
-    ) -> Value:
+    ) -> ArrayRead:
         """Drive the queue for a single cycle and expose its handshake signals."""
 
         empty = self.is_empty()
@@ -111,9 +111,16 @@ class CircularQueue:
 
         return pop_data
 
-    def choose(self, selector: Callable[[Value], Value]) -> CircularQueueSelection:
+    def choose(self, selector: Callable[[Any], Value]) -> CircularQueueSelection:
         """Choose the first element in the queue matching the given selector."""
-        selected_data = self._storage[0]
+
+        def to_value(value_like) -> Value:
+            if isinstance(value_like, RecordValue):
+                return value_like.value()
+            else:
+                return value_like
+
+        selected_data = to_value(self._storage[0])
         selected_index = self._zero_addr
         selected_distance = self._zero
         selected_valid = Bits(1)(0)
@@ -125,7 +132,7 @@ class CircularQueue:
         for offset in range(self.depth):
             offset_uint = UInt(self.count_bits)(offset)
             has_entry = offset_uint < count_uint
-            value = self._storage[pointer]
+            value = to_value(self._storage[pointer])
             matches = selector(value).bitcast(Bits(1))
             candidate_valid = has_entry & matches
             new_hit = candidate_valid & ~selected_valid
@@ -140,8 +147,13 @@ class CircularQueue:
             incremented_distance = (distance_uint + self._one).bitcast(Bits(self.count_bits))
             distance = incremented_distance
 
+        if isinstance(self._dtype, Record):
+            data = self._dtype.view(selected_data)
+        else:
+            data = selected_data
+
         return CircularQueueSelection(
-            data=selected_data,
+            data=data,
             index=selected_index,
             distance=selected_distance,
             valid=selected_valid,
