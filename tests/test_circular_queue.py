@@ -3,7 +3,7 @@ from typing import Optional, Tuple
 from assassyn.frontend import *
 from assassyn.backend import elaborate
 from assassyn.utils import run_simulator
-from utils import run_quietly
+from tests.utils import run_quietly
 from dataclass.circular_queue import CircularQueue
 import re
 
