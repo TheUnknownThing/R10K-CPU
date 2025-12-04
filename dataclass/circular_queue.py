@@ -46,13 +46,13 @@ class CircularQueue:
         self._head = RegArray(Bits(self.addr_bits), 1, initializer=[0])
         self._tail = RegArray(Bits(self.addr_bits), 1, initializer=[0])
         self._count = RegArray(Bits(self.count_bits), 1, initializer=[0])
+        
         self._last_index = UInt(self.addr_bits)(depth - 1)
         self._one_addr = UInt(self.addr_bits)(1)
         self._one = UInt(self.count_bits)(1)
         self._count_full = Bits(self.count_bits)(depth)
         self._zero_addr = Bits(self.addr_bits)(0)
         self._zero = Bits(self.count_bits)(0)
-        self._zero_element = element_shape(0)  # pyright: ignore[reportCallIssue]
 
     def is_full(self) -> Value:
         return self._count[0] == self._count_full
@@ -113,7 +113,7 @@ class CircularQueue:
 
     def choose(self, selector: Callable[[Value], Value]) -> CircularQueueSelection:
         """Choose the first element in the queue matching the given selector."""
-        selected_data = self._zero_element
+        selected_data = self._storage[0]
         selected_index = self._zero_addr
         selected_distance = self._zero
         selected_valid = Bits(1)(0)
