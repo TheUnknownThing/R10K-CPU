@@ -29,9 +29,11 @@ class CircularQueue:
         *,
         initializer: list[int] | None = None,
         name: str | None = None,
+        default_count: int = 0,
     ) -> None:
         if depth <= 0:
             raise ValueError("Queue depth must be positive.")
+        assert default_count < depth, "Default count must be less than depth."
         self.depth = depth
         self.name = name or "circular_queue"
         self.addr_bits = max(1, math.ceil(math.log2(depth)))
@@ -44,8 +46,8 @@ class CircularQueue:
         self._dtype = dtype
         self._storage = RegArray(dtype, depth, initializer=initializer)
         self._head = RegArray(Bits(self.addr_bits), 1, initializer=[0])
-        self._tail = RegArray(Bits(self.addr_bits), 1, initializer=[0])
-        self._count = RegArray(Bits(self.count_bits), 1, initializer=[0])
+        self._tail = RegArray(Bits(self.addr_bits), 1, initializer=[default_count % depth])
+        self._count = RegArray(Bits(self.count_bits), 1, initializer=[default_count])
 
         self._last_index = UInt(self.addr_bits)(depth - 1)
         self._one_addr = UInt(self.addr_bits)(1)

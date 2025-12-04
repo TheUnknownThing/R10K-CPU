@@ -9,7 +9,8 @@ class FreeList(Downstream):
     def __init__(self, register_number: int):
         super().__init__()
         bits = ceil(log2(register_number))
-        self.queue = CircularQueue(Bits(bits), register_number)
+        initializer = [i for i in range(register_number)]
+        self.queue = CircularQueue(Bits(bits), register_number, initializer=initializer, default_count=register_number)
 
     @downstream.combinational
     def build(self, pop_enable: Value, push_enable: Value, push_data: Value):
