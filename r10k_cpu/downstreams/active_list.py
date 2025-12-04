@@ -56,3 +56,6 @@ class ActiveList(Downstream):
             actual_branch=bundle.actual_branch,
         )
         self.queue[index] = new_bundle
+
+    def is_full(self) -> Value:
+        return self.queue.is_full()

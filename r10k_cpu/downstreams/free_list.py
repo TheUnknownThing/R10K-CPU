@@ -19,4 +19,4 @@ class FreeList(Downstream):
         return self.queue.front()
 
     def valid(self) -> Value:
-        return self.queue.is_empty()
+        return ~self.queue.is_empty()
