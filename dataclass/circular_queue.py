@@ -33,7 +33,7 @@ class CircularQueue:
     ) -> None:
         if depth <= 0:
             raise ValueError("Queue depth must be positive.")
-        assert default_count < depth, "Default count must be less than depth."
+        assert default_count <= depth, "Default count must be less than or equal to depth."
         self.depth = depth
         self.name = name or "circular_queue"
         self.addr_bits = max(1, math.ceil(math.log2(depth)))
