@@ -29,7 +29,7 @@ def build_cpu(
     with sys:
         driver = Driver()
         commit = Commit()
-        free_list = FreeList(depth=2**6)  # 64 physical registers
+        free_list = FreeList(register_number=2**6)  # 64 physical registers
         active_list = ActiveList(depth=2**5)  # Active List depth = 32
         alu_queue = ALUQueue(depth=2**5)  # ALU Queue depth = 32
         lsq = LSQ(depth=2**5)  # LSQ depth = 32
@@ -47,7 +47,7 @@ def build_cpu(
 
         driver.build(commit=commit)
 
-        pop_instruction, old_physical, is_alu = commit.build(
+        pop_instruction, alu_pop, old_physical = commit.build(
             active_list_queue=active_list.queue,
             map_table_active=map_table_active,
             map_table_0=map_table_0,
@@ -60,15 +60,18 @@ def build_cpu(
             # TODO: pop_enable needs to be set to ID's return signal
         )
 
+        active_list.build(
+            pop_enable=pop_instruction,
+            # TODO: push_inst needs to be set to ID's return signal
+        )
+
         alu_queue.build(
-            pop_enable=pop_instruction & is_alu,
-            active_list_idx=active_list.queue.get_tail(),
+            pop_enable=alu_pop,
             # TODO: push_enable and push_data need to be set to ID's return signal
         )
 
         lsq.build(
-            pop_enable=pop_instruction & ~is_alu,
-            active_list_idx=active_list.queue.get_tail(),
+            pop_enable=~alu_pop,
             # TODO: push_enable and push_data need to be set to ID's return signal
         )
 
@@ -88,3 +91,9 @@ def build_cpu(
     simulator_binary = utils.build_simulator(simulator_path)
     print(f"Simulator binary built: {simulator_binary}")
     return sys, simulator_binary, verilog_path
+
+if __name__ == "__main__":
+    sys, simulator_binary, verilog_path = build_cpu()
+    sim_output = utils.run_simulator(binary_path=simulator_binary)
+    print("Simulation output:\n", sim_output)
+    utils.run_verilator(verilog_path)

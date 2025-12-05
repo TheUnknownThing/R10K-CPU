@@ -25,11 +25,12 @@ lsq_entry_type = Record(
     valid=Bits(1),
     active_list_idx=Bits(5),
     lsq_queue_idx=Bits(5),
-    addr=Bits(data_depth),
-    op_type=Bits(3), # load/store type
-    physical_reg=Bits(6),
-    offset=Bits(32),  # TODO: FIX THIS
-    status=lsq_status_type,
+    address=Bits(data_depth),
+    data=Bits(32),
+    is_load=Bits(1),
+    is_store=Bits(1),
+    op_type=Bits(3),  # load/store type
+    # TODO: ad lsq entry status
 )
 
 # NOTE: this is subject to change based on design

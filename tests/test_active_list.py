@@ -96,6 +96,7 @@ class Driver(Module):
         push_dest_new_physical = Bits(6)(0)
         push_dest_old_physical = Bits(6)(0)
         push_is_branch = Bits(1)(0)
+        push_is_alu = Bits(1)(1)
         push_predict_branch = Bits(1)(0)
 
         pop_enable = Bits(1)(0)
@@ -114,6 +115,7 @@ class Driver(Module):
                 push_dest_new_physical = cond.select(Bits(6)(step.push["dest_new_physical"]), push_dest_new_physical)
                 push_dest_old_physical = cond.select(Bits(6)(step.push["dest_old_physical"]), push_dest_old_physical)
                 push_is_branch = cond.select(Bits(1)(step.push["is_branch"]), push_is_branch)
+                push_is_alu = cond.select(Bits(1)(step.push.get("is_alu", 1)), push_is_alu)
                 push_predict_branch = cond.select(Bits(1)(step.push["predict_branch"]), push_predict_branch)
 
             if step.retire:
@@ -130,6 +132,7 @@ class Driver(Module):
             dest_new_physical=push_dest_new_physical,
             dest_old_physical=push_dest_old_physical,
             is_branch=push_is_branch,
+            is_alu=push_is_alu,
             predict_branch=push_predict_branch,
         )
 

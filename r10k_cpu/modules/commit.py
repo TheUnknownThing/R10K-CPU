@@ -24,4 +24,4 @@ class Commit(Module):
                 # TODO: add other recovery steps
 
         # front_entry ready indicates whether to pop instruction
-        return front_entry.ready, front_entry.dest_old_physical, front_entry.is_alu
+        return front_entry.ready, front_entry.ready & front_entry.is_alu, front_entry.dest_old_physical

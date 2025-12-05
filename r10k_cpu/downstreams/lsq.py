@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from assassyn.frontend import *
 from dataclass.circular_queue import CircularQueue
 from r10k_cpu.common import lsq_entry_type
+from r10k_cpu.config import data_depth
 
 @dataclass(frozen=True)
 class LSQPushEntry:
@@ -25,7 +26,7 @@ class LSQ(Downstream):
             valid=push_enable.optional(Bits(1)(0)),
             active_list_idx=active_list_idx,
             lsq_queue_idx=(self.queue.get_tail().bitcast(UInt(5)) + UInt(1)(1)).bitcast(Bits(5)),  # Next index
-            address=push_data.address.optional(Bits(32)(0)),
+            address=push_data.address.optional(Bits(data_depth)(0)),
             data=push_data.data.optional(Bits(32)(0)),
             is_load=push_data.is_load.optional(Bits(1)(0)),
             is_store=push_data.is_store.optional(Bits(1)(0)),
