@@ -47,7 +47,7 @@ def build_cpu(
 
         driver.build(commit=commit)
 
-        pop_instruction, alu_pop, old_physical = commit.build(
+        pop_instruction, alu_pop, mem_pop, old_physical = commit.build(
             active_list_queue=active_list.queue,
             map_table_active=map_table_active,
             map_table_0=map_table_0,
@@ -71,7 +71,7 @@ def build_cpu(
         )
 
         lsq.build(
-            pop_enable=~alu_pop,
+            pop_enable=mem_pop,
             # TODO: push_enable and push_data need to be set to ID's return signal
         )
 
