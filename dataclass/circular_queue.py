@@ -161,6 +161,9 @@ class CircularQueue:
             valid=selected_valid,
         )
 
+    def get_tail(self) -> Value:
+        return self._tail[0]
+
     def _increment_pointer(self, pointer: Value) -> Value:
         pointer_uint = pointer.bitcast(UInt(self.addr_bits))
         wrapped = pointer_uint == self._last_index

@@ -10,8 +10,9 @@ rob_entry_type = Record(
     dest_old_physical=Bits(6),
     ready=Bits(1),
     is_branch=Bits(1),
+    is_alu=Bits(1),             # 1 for ALU, 0 for LSQ
     predict_branch=Bits(1),
-    actual_branch=Bits(1),
+    actual_branch=Bits(1),      # waiting ALU to fill this in
 )
 
 lsq_status_type = Record(
@@ -22,9 +23,23 @@ lsq_status_type = Record(
 
 lsq_entry_type = Record(
     valid=Bits(1),
-    rob_idx=Bits(5),
+    active_list_idx=Bits(5),
+    lsq_queue_idx=Bits(5),
     addr=Bits(data_depth),
+    op_type=Bits(3), # load/store type
     physical_reg=Bits(6),
     offset=Bits(32),  # TODO: FIX THIS
     status=lsq_status_type,
+)
+
+# NOTE: this is subject to change based on design
+alu_queue_entry_type = Record(
+    valid=Bits(1),
+    active_list_idx=Bits(5),
+    alu_queue_idx=Bits(5),
+    rs1_physical=Bits(6),
+    rs2_physical=Bits(6),
+    rd_physical=Bits(6),
+    alu_op=Bits(4),
+    imm=Bits(32),
 )

@@ -12,6 +12,7 @@ class InstructionPushEntry:
     dest_new_physical: Value
     dest_old_physical: Value
     is_branch: Value
+    is_alu: Value
     predict_branch: Value
 
 
@@ -26,7 +27,7 @@ class ActiveList(Downstream):
     def build(
         self,
         push_inst: InstructionPushEntry,
-        retire_enable: Value,
+        pop_enable: Value,
     ):
         push_valid = push_inst.valid.optional(Bits(1)(0))
         entry = rob_entry_type.bundle(
@@ -36,12 +37,13 @@ class ActiveList(Downstream):
             dest_old_physical=push_inst.dest_old_physical.optional(Bits(6)(0)),
             ready=Bits(1)(0),
             is_branch=push_inst.is_branch.optional(Bits(1)(0)),
+            is_alu=push_inst.is_alu.optional(Bits(1)(0)),
             predict_branch=push_inst.predict_branch.optional(Bits(1)(0)),
             actual_branch=Bits(1)(0),
         )
-        retire_enable = retire_enable.optional(Bits(1)(0))
+        pop_enable = pop_enable.optional(Bits(1)(0))
 
-        self.queue.operate(push_enable=push_valid, push_data=entry, pop_enable=retire_enable)
+        self.queue.operate(push_enable=push_valid, push_data=entry, pop_enable=pop_enable)
 
     def set_ready(self, index: Value):
         bundle = self.queue[index]
@@ -52,6 +54,7 @@ class ActiveList(Downstream):
             dest_old_physical=bundle.dest_old_physical,
             ready=Bits(1)(1),
             is_branch=bundle.is_branch,
+            is_alu=bundle.is_alu,
             predict_branch=bundle.predict_branch,
             actual_branch=bundle.actual_branch,
         )

@@ -98,7 +98,7 @@ class Driver(Module):
         push_is_branch = Bits(1)(0)
         push_predict_branch = Bits(1)(0)
 
-        retire_enable = Bits(1)(0)
+        pop_enable = Bits(1)(0)
 
         # set_ready logic
         set_ready_en = Bits(1)(0)
@@ -117,7 +117,7 @@ class Driver(Module):
                 push_predict_branch = cond.select(Bits(1)(step.push["predict_branch"]), push_predict_branch)
 
             if step.retire:
-                retire_enable = cond.select(Bits(1)(1), retire_enable)
+                pop_enable = cond.select(Bits(1)(1), pop_enable)
 
             if step.set_ready is not None:
                 set_ready_en = cond.select(Bits(1)(1), set_ready_en)
@@ -133,7 +133,7 @@ class Driver(Module):
             predict_branch=push_predict_branch,
         )
 
-        self.active_list.build(push_inst, retire_enable)
+        self.active_list.build(push_inst, pop_enable)
 
         with Condition(set_ready_en):
             self.active_list.set_ready(set_ready_idx)
@@ -141,7 +141,7 @@ class Driver(Module):
         # Logging
         log_strings = (
             "cycle: {}, head: {}, tail: {}, count: {}, "
-            "push_valid: {}, retire_enable: {}, set_ready_en: {}, set_ready_idx: {}, "
+            "push_valid: {}, pop_enable: {}, set_ready_en: {}, set_ready_idx: {}, "
             "front_pc: {}, front_ready: {}, "
             "contents: "
         )
@@ -152,7 +152,7 @@ class Driver(Module):
             self.active_list.queue._tail[0],
             self.active_list.queue.count(),
             push_valid,
-            retire_enable,
+            pop_enable,
             set_ready_en,
             set_ready_idx,
             self.active_list.queue.front().pc,
@@ -173,9 +173,9 @@ def check(raw: str):
     lines = raw.strip().split("\n")
 
     def parse_line(line):
-        # cycle: 1, head: 0, tail: 0, count: 0, push_valid: 0, retire_enable: 0, set_ready_en: 0, set_ready_idx: 0, front_pc: 0, front_ready: 0, contents: (0, 0), (0, 0), ...
+        # cycle: 1, head: 0, tail: 0, count: 0, push_valid: 0, pop_enable: 0, set_ready_en: 0, set_ready_idx: 0, front_pc: 0, front_ready: 0, contents: (0, 0), (0, 0), ...
         m = re.search(
-            r"cycle: (\d+), head: (\d+), tail: (\d+), count: (\d+), push_valid: (\d+), retire_enable: (\d+), set_ready_en: (\d+), set_ready_idx: (\d+), front_pc: (\d+), front_ready: (\d+)",
+            r"cycle: (\d+), head: (\d+), tail: (\d+), count: (\d+), push_valid: (\d+), pop_enable: (\d+), set_ready_en: (\d+), set_ready_idx: (\d+), front_pc: (\d+), front_ready: (\d+)",
             line,
         )
         if m:
@@ -185,7 +185,7 @@ def check(raw: str):
                 "tail": int(m.group(3)),
                 "count": int(m.group(4)),
                 "push_valid": int(m.group(5)),
-                "retire_enable": int(m.group(6)),
+                "pop_enable": int(m.group(6)),
                 "set_ready_en": int(m.group(7)),
                 "set_ready_idx": int(m.group(8)),
                 "front_pc": int(m.group(9)),
