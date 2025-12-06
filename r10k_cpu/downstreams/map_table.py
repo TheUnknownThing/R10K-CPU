@@ -34,6 +34,8 @@ class MapTable(Downstream):
         packed_init = self._pack_initializer(initializer)
 
         storage_dtype = Bits(self._storage_bits)
+
+        # _spec_table holds the speculative mappings, commit_table holds the committed mappings
         self._spec_table = RegArray(storage_dtype, 1, initializer=[packed_init])
         self._commit_table = RegArray(storage_dtype, 1, initializer=[packed_init])
 
@@ -84,9 +86,11 @@ class MapTable(Downstream):
         self._spec_table[0] = spec_bits_next.bitcast(Bits(self._storage_bits))
 
     def read_spec(self, logical_idx: Value) -> Value:
+        """Read the speculative physical mapping for a given logical index."""
         return self._read_entry(self._spec_table[0], logical_idx)
 
     def read_commit(self, logical_idx: Value) -> Value:
+        """Read the committed physical mapping for a given logical index."""
         return self._read_entry(self._commit_table[0], logical_idx)
 
     def spec_state(self) -> Value:
@@ -96,6 +100,7 @@ class MapTable(Downstream):
         return self._commit_table[0]
 
     def idle_port(self) -> MapTableWriteEntry:
+        """idle_port returns no-op write entry."""
         return MapTableWriteEntry(
             enable=self._zero_enable,
             logical_idx=self._zero_index,
