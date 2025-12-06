@@ -1,5 +1,6 @@
+from enum import Enum
+from math import ceil, log2
 from assassyn.frontend import Bits, Record
-from .config import data_depth
 
 # TODO: This is subject to change based on design
 
@@ -16,27 +17,29 @@ rob_entry_type = Record(
     actual_branch=Bits(1),  # waiting ALU to fill this in
 )
 
-lsq_status_type = Record(
-    addr_ready=Bits(1),
-    data_ready=Bits(1),
-    committed=Bits(1),
-)
+
+class MemoryOpType(Enum):
+    BYTE = 0
+    HALF = 1
+    WORD = 2
+    BYTE_U = 3
+    HALF_U = 4
+
+
+MEMORY_OP_TYPE_LEN = ceil(log2(len(MemoryOpType)))
+
 
 lsq_entry_type = Record(
     valid=Bits(1),
     active_list_idx=Bits(5),
     lsq_queue_idx=Bits(5),
-    address=Bits(data_depth),
-    data=Bits(32),
     rs1_physical=Bits(6),
     rs2_physical=Bits(6),
     rd_physical=Bits(6),
+    imm=Bits(32),
     is_load=Bits(1),
     is_store=Bits(1),
-    op_type=Bits(3),  # load/store type
-    rs1_needed=Bits(1),
-    rs2_needed=Bits(1),
-    # TODO: ad lsq entry status
+    op_type=Bits(MEMORY_OP_TYPE_LEN),
 )
 
 # NOTE: this is subject to change based on design

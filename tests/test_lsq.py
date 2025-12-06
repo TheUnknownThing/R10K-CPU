@@ -19,13 +19,13 @@ class Step:
 
 DEPTH = 4
 STEPS = [
-    Step(1, push={"address": 0x1000, "data": 0xAAAA_BBBB, "is_load": 1, "is_store": 0, "op_type": 0}),
-    Step(2, push={"address": 0x1004, "data": 0xCCCC_DDDD, "is_load": 0, "is_store": 1, "op_type": 1}),
+    Step(1, push={"is_load": 1, "is_store": 0, "op_type": 0, "imm": 0x100}),
+    Step(2, push={"is_load": 0, "is_store": 1, "op_type": 1, "imm": 0x200}),
     Step(3, pop=True),
-    Step(4, push={"address": 0x2000, "data": 0x1111_2222, "is_load": 1, "is_store": 0, "op_type": 2}, pop=True),
-    Step(5, push={"address": 0x2004, "data": 0x3333_4444, "is_load": 0, "is_store": 1, "op_type": 3}),
+    Step(4, push={"is_load": 1, "is_store": 0, "op_type": 2, "imm": 0x300}, pop=True),
+    Step(5, push={"is_load": 0, "is_store": 1, "op_type": 3, "imm": 0x400}),
     Step(6, pop=True),
-    Step(7, push={"address": 0x3000, "data": 0x5555_6666, "is_load": 1, "is_store": 0, "op_type": 4}),
+    Step(7, push={"is_load": 1, "is_store": 0, "op_type": 4, "imm": 0x500}),
     Step(8, pop=True),
     Step(9, pop=True),
 ]
@@ -49,48 +49,39 @@ class Driver(Module):
 
         push_en = Bits(1)(0)
         pop_en = Bits(1)(0)
-        push_addr = Bits(32)(0)
-        push_data = Bits(32)(0)
         push_is_load = Bits(1)(0)
         push_is_store = Bits(1)(0)
         push_op = Bits(3)(0)
         push_rd = Bits(6)(0)
         push_rs1 = Bits(6)(0)
         push_rs2 = Bits(6)(0)
-        push_rs1_needed = Bits(1)(1)
-        push_rs2_needed = Bits(1)(1)
+        push_imm = Bits(32)(0)
         active_idx = Bits(5)(0)
 
         for idx, step in enumerate(STEPS):
             cond = cycle_val == UInt(32)(step.cycle)
             if step.push is not None:
                 push_en = cond.select(Bits(1)(1), push_en)
-                push_addr = cond.select(Bits(32)(step.push["address"]), push_addr)
-                push_data = cond.select(Bits(32)(step.push["data"]), push_data)
                 push_is_load = cond.select(Bits(1)(step.push["is_load"]), push_is_load)
                 push_is_store = cond.select(Bits(1)(step.push["is_store"]), push_is_store)
                 push_op = cond.select(Bits(3)(step.push["op_type"]), push_op)
                 push_rd = cond.select(Bits(6)((idx + 1) % 64), push_rd)
                 push_rs1 = cond.select(Bits(6)((idx + 2) % 64), push_rs1)
                 push_rs2 = cond.select(Bits(6)((idx + 3) % 64), push_rs2)
-                push_rs1_needed = cond.select(Bits(1)(1), push_rs1_needed)
-                push_rs2_needed = cond.select(Bits(1)(1), push_rs2_needed)
+                push_imm = cond.select(Bits(32)(step.push["imm"]), push_imm)
                 active_idx = cond.select(Bits(5)(idx), active_idx)
 
             if step.pop:
                 pop_en = cond.select(Bits(1)(1), pop_en)
 
         push_entry = LSQPushEntry(
-            address=push_addr,
-            data=push_data,
             is_load=push_is_load,
             is_store=push_is_store,
             op_type=push_op,
             rd_physical=push_rd,
             rs1_physical=push_rs1,
             rs2_physical=push_rs2,
-            rs1_needed=push_rs1_needed,
-            rs2_needed=push_rs2_needed,
+            imm=push_imm,
         )
 
         self.queue.build(push_en, push_entry, pop_en, active_idx)
@@ -99,7 +90,7 @@ class Driver(Module):
 
         log_str = (
             "cycle: {}, head: {}, tail: {}, count: {}, push_en: {}, pop_en: {}, "
-            "front_valid: {}, front_queue_idx: {}, front_addr: {}, contents: "
+            "front_valid: {}, front_queue_idx: {}, contents: "
         )
 
         args = [
@@ -111,21 +102,19 @@ class Driver(Module):
             pop_en,
             front_entry.valid,
             front_entry.lsq_queue_idx,
-            front_entry.address,
         ]
 
         for i in range(self.depth):
             entry = self.queue.queue._dtype.view(self.queue.queue[i])
-            log_str += f"E{i}:{{}},{{}},{{}},{{}},{{}},{{}},{{}}; "
+            log_str += f"E{i}:{{}},{{}},{{}},{{}},{{}},{{}}; "
             args.extend(
                 [
                     entry.valid,
                     entry.active_list_idx,
                     entry.lsq_queue_idx,
-                    entry.address,
-                    entry.data,
                     entry.is_load,
                     entry.is_store,
+                    entry.imm,
                 ]
             )
 
@@ -135,24 +124,23 @@ class Driver(Module):
 def parse_line(line: str) -> Optional[Dict[str, Any]]:
     base_match = re.search(
         r"cycle: (\d+), head: (\d+), tail: (\d+), count: (\d+), push_en: (\d+), pop_en: (\d+), "
-        r"front_valid: (\d+), front_queue_idx: (\d+), front_addr: (\d+), contents: (.*)",
+        r"front_valid: (\d+), front_queue_idx: (\d+), contents: (.*)",
         line,
     )
     if not base_match:
         return None
 
-    entry_block = base_match.group(10)
+    entry_block = base_match.group(9)
     entries: Dict[int, Dict[str, int]] = {}
-    for match in re.finditer(r"E(\d+):([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+);", entry_block):
+    for match in re.finditer(r"E(\d+):([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+);", entry_block):
         idx = int(match.group(1))
         entries[idx] = {
             "valid": int(match.group(2)),
             "active_idx": int(match.group(3)),
             "queue_idx": int(match.group(4)),
-            "address": int(match.group(5)),
-            "data": int(match.group(6)),
-            "is_load": int(match.group(7)),
-            "is_store": int(match.group(8)),
+            "is_load": int(match.group(5)),
+            "is_store": int(match.group(6)),
+            "imm": int(match.group(7)),
         }
 
     return {
@@ -164,7 +152,6 @@ def parse_line(line: str) -> Optional[Dict[str, Any]]:
         "pop_en": int(base_match.group(6)),
         "front_valid": int(base_match.group(7)),
         "front_queue_idx": int(base_match.group(8)),
-        "front_addr": int(base_match.group(9)),
         "entries": entries,
     }
 
@@ -182,10 +169,9 @@ def check(raw: str):
             "valid": 0,
             "active_idx": 0,
             "queue_idx": 0,
-            "address": 0,
-            "data": 0,
             "is_load": 0,
             "is_store": 0,
+            "imm": 0,
         }
         for _ in range(DEPTH)
     ]
@@ -208,7 +194,6 @@ def check(raw: str):
         if count > 0:
             expected_front = queue_storage[head]
             assert log_entry["front_valid"] == expected_front["valid"], "Front valid mismatch"
-            assert log_entry["front_addr"] == expected_front["address"], "Front addr mismatch"
             assert log_entry["front_queue_idx"] == expected_front["queue_idx"], "Front idx mismatch"
 
         for i in range(DEPTH):
@@ -229,10 +214,9 @@ def check(raw: str):
                 "valid": 1,
                 "active_idx": STEPS.index(step),
                 "queue_idx": (tail + 1) % 32,
-                "address": push["address"],
-                "data": push["data"],
                 "is_load": push["is_load"],
                 "is_store": push["is_store"],
+                "imm": push["imm"],
             }
             queue_storage[tail] = entry
             tail = (tail + 1) % DEPTH
