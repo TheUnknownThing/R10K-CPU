@@ -14,6 +14,7 @@ class Step:
     push: Optional[Dict[str, int]] = None
     retire: bool = False
     set_ready: Optional[int] = None  # index to set ready
+    actual_branch: Optional[int] = None
 
 
 STEPS = [
@@ -24,6 +25,7 @@ STEPS = [
             "dest_logical": 1,
             "dest_new_physical": 10,
             "dest_old_physical": 1,
+            "imm": 0x100,
             "is_branch": 0,
             "predict_branch": 0,
         },
@@ -35,6 +37,7 @@ STEPS = [
             "dest_logical": 2,
             "dest_new_physical": 11,
             "dest_old_physical": 2,
+            "imm": 0x200,
             "is_branch": 0,
             "predict_branch": 0,
         },
@@ -46,6 +49,7 @@ STEPS = [
             "dest_logical": 3,
             "dest_new_physical": 12,
             "dest_old_physical": 3,
+            "imm": 0x300,
             "is_branch": 1,
             "predict_branch": 1,
         },
@@ -61,15 +65,30 @@ STEPS = [
             "dest_logical": 4,
             "dest_new_physical": 13,
             "dest_old_physical": 4,
+            "imm": 0x400,
             "is_branch": 0,
             "predict_branch": 0,
         },
     ),
-    Step(9, set_ready=2),  # Set third instruction ready. Index 2.
+    Step(9, set_ready=2, actual_branch=0),  # Set third instruction ready. Index 2.
     Step(10, retire=True),  # Retire third instruction
     Step(11, set_ready=3),  # Set fourth instruction ready. Index 3.
     Step(12, retire=True),  # Retire fourth instruction
-    Step(13),  # Idle
+    Step(
+        13,
+        push={
+            "pc": 0x1010,
+            "dest_logical": 5,
+            "dest_new_physical": 14,
+            "dest_old_physical": 5,
+            "imm": 0x500,
+            "is_branch": 1,
+            "predict_branch": 0,
+        },
+    ),
+    Step(14, set_ready=4, actual_branch=1),
+    Step(15, retire=True),
+    Step(16),  # Idle
 ]
 
 
@@ -95,6 +114,7 @@ class Driver(Module):
         push_dest_logical = Bits(5)(0)
         push_dest_new_physical = Bits(6)(0)
         push_dest_old_physical = Bits(6)(0)
+        push_imm = Bits(32)(0)
         push_is_branch = Bits(1)(0)
         push_is_alu = Bits(1)(1)
         push_predict_branch = Bits(1)(0)
@@ -104,6 +124,8 @@ class Driver(Module):
         # set_ready logic
         set_ready_en = Bits(1)(0)
         set_ready_idx = Bits(self.active_list.queue.addr_bits)(0)
+        set_ready_actual_branch_en = Bits(1)(0)
+        set_ready_actual_branch_val = Bits(1)(0)
 
         for step in STEPS:
             cond = cycle_val == UInt(32)(step.cycle)
@@ -114,6 +136,7 @@ class Driver(Module):
                 push_dest_logical = cond.select(Bits(5)(step.push["dest_logical"]), push_dest_logical)
                 push_dest_new_physical = cond.select(Bits(6)(step.push["dest_new_physical"]), push_dest_new_physical)
                 push_dest_old_physical = cond.select(Bits(6)(step.push["dest_old_physical"]), push_dest_old_physical)
+                push_imm = cond.select(Bits(32)(step.push["imm"]), push_imm)
                 push_is_branch = cond.select(Bits(1)(step.push["is_branch"]), push_is_branch)
                 push_is_alu = cond.select(Bits(1)(step.push.get("is_alu", 1)), push_is_alu)
                 push_predict_branch = cond.select(Bits(1)(step.push["predict_branch"]), push_predict_branch)
@@ -124,6 +147,9 @@ class Driver(Module):
             if step.set_ready is not None:
                 set_ready_en = cond.select(Bits(1)(1), set_ready_en)
                 set_ready_idx = cond.select(Bits(self.active_list.queue.addr_bits)(step.set_ready), set_ready_idx)
+                if step.actual_branch is not None:
+                    set_ready_actual_branch_en = cond.select(Bits(1)(1), set_ready_actual_branch_en)
+                    set_ready_actual_branch_val = cond.select(Bits(1)(step.actual_branch), set_ready_actual_branch_val)
 
         push_inst = InstructionPushEntry(
             valid=push_valid,
@@ -131,6 +157,7 @@ class Driver(Module):
             dest_logical=push_dest_logical,
             dest_new_physical=push_dest_new_physical,
             dest_old_physical=push_dest_old_physical,
+            imm=push_imm,
             is_branch=push_is_branch,
             is_alu=push_is_alu,
             predict_branch=push_predict_branch,
@@ -139,7 +166,9 @@ class Driver(Module):
         self.active_list.build(push_inst, pop_enable)
 
         with Condition(set_ready_en):
-            self.active_list.set_ready(set_ready_idx)
+            old_actual_branch = self.active_list.queue[set_ready_idx].actual_branch
+            final_actual_branch = set_ready_actual_branch_en.select(set_ready_actual_branch_val, old_actual_branch)
+            self.active_list.set_ready(set_ready_idx, actual_branch=final_actual_branch)
 
         # Logging
         log_strings = (
@@ -163,10 +192,12 @@ class Driver(Module):
         ]
 
         for i in range(self.depth):
-            log_strings += "({}, {}), "
+            log_strings += "({}, {}, {}, {}), "
             entry = self.active_list.queue[i]
             args.append(entry.pc)
             args.append(entry.ready)
+            args.append(entry.imm)
+            args.append(entry.actual_branch)
 
         log(log_strings, *args)
 
@@ -196,10 +227,10 @@ def check(raw: str):
             }
             # Parse contents
             contents_str = line.split("contents: ")[1]
-            # (pc, ready), (pc, ready), ...
+            # (pc, ready, imm, actual_branch), ...
             # Use regex to find all pairs
-            pairs = re.findall(r"\((\d+), (\d+)\)", contents_str)
-            base["contents"] = [{"pc": int(p[0]), "ready": int(p[1])} for p in pairs]
+            pairs = re.findall(r"\((\d+), (\d+), (\d+), (\d+)\)", contents_str)
+            base["contents"] = [{"pc": int(p[0]), "ready": int(p[1]), "imm": int(p[2]), "actual_branch": int(p[3])} for p in pairs]
             return base
         return None
 
@@ -211,7 +242,7 @@ def check(raw: str):
 
     # Python Golden Model
     depth = 16
-    queue_storage = [{"pc": 0, "ready": 0} for _ in range(depth)]
+    queue_storage = [{"pc": 0, "ready": 0, "imm": 0, "actual_branch": 0} for _ in range(depth)]
     head = 0
     tail = 0
     count = 0
@@ -245,12 +276,18 @@ def check(raw: str):
         for i in range(depth):
             expected_pc = queue_storage[i]["pc"]
             expected_ready = queue_storage[i]["ready"]
+            expected_imm = queue_storage[i]["imm"]
+            expected_actual_branch = queue_storage[i]["actual_branch"]
             got_pc = log_entry["contents"][i]["pc"]
             got_ready = log_entry["contents"][i]["ready"]
+            got_imm = log_entry["contents"][i]["imm"]
+            got_actual_branch = log_entry["contents"][i]["actual_branch"]
             assert got_pc == expected_pc, f"Cycle {c}, Index {i}: Expected pc {expected_pc}, got {got_pc}"
             assert (
                 got_ready == expected_ready
             ), f"Cycle {c}, Index {i}: Expected ready {expected_ready}, got {got_ready}"
+            assert got_imm == expected_imm, f"Cycle {c}, Index {i}: Expected imm {expected_imm}, got {got_imm}"
+            assert got_actual_branch == expected_actual_branch, f"Cycle {c}, Index {i}: Expected actual_branch {expected_actual_branch}, got {got_actual_branch}"
 
         # 2. Apply operations for NEXT cycle
         step = step_map.get(c)
@@ -258,20 +295,26 @@ def check(raw: str):
         push_data = None
         retire = False
         set_ready_idx = None
+        actual_branch = None
 
         if step:
             push_data = step.push
             retire = step.retire
             set_ready_idx = step.set_ready
+            actual_branch = step.actual_branch
 
         # Apply Set Ready (happens at end of cycle effectively for next cycle view, but in hardware it's a write)
         if set_ready_idx is not None:
             queue_storage[set_ready_idx]["ready"] = 1
+            if actual_branch is not None:
+                queue_storage[set_ready_idx]["actual_branch"] = actual_branch
 
         # Apply Push
         if push_data:
             queue_storage[tail]["pc"] = push_data["pc"]
             queue_storage[tail]["ready"] = 0  # Reset ready on new push
+            queue_storage[tail]["imm"] = push_data["imm"]
+            queue_storage[tail]["actual_branch"] = 0
             tail = (tail + 1) % depth
 
         # Apply Retire (Pop)

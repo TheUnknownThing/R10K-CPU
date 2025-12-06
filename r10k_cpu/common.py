@@ -8,11 +8,12 @@ rob_entry_type = Record(
     dest_logical=Bits(5),
     dest_new_physical=Bits(6),
     dest_old_physical=Bits(6),
+    imm=Bits(32),
     ready=Bits(1),
     is_branch=Bits(1),
-    is_alu=Bits(1),             # 1 for ALU, 0 for LSQ
+    is_alu=Bits(1),  # 1 for ALU, 0 for LSQ
     predict_branch=Bits(1),
-    actual_branch=Bits(1),      # waiting ALU to fill this in
+    actual_branch=Bits(1),  # waiting ALU to fill this in
 )
 
 lsq_status_type = Record(

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 from assassyn.frontend import *
 from dataclass.circular_queue import CircularQueue
 from r10k_cpu.common import rob_entry_type
@@ -11,6 +12,7 @@ class InstructionPushEntry:
     dest_logical: Value
     dest_new_physical: Value
     dest_old_physical: Value
+    imm: Value
     is_branch: Value
     is_alu: Value
     predict_branch: Value
@@ -35,6 +37,7 @@ class ActiveList(Downstream):
             dest_logical=push_inst.dest_logical.optional(Bits(5)(0)),
             dest_new_physical=push_inst.dest_new_physical.optional(Bits(6)(0)),
             dest_old_physical=push_inst.dest_old_physical.optional(Bits(6)(0)),
+            imm=push_inst.imm.optional(Bits(32)(0)),
             ready=Bits(1)(0),
             is_branch=push_inst.is_branch.optional(Bits(1)(0)),
             is_alu=push_inst.is_alu.optional(Bits(1)(0)),
@@ -43,20 +46,25 @@ class ActiveList(Downstream):
         )
         pop_enable = pop_enable.optional(Bits(1)(0))
 
-        self.queue.operate(push_enable=push_valid, push_data=entry, pop_enable=pop_enable)
+        self.queue.operate(
+            push_enable=push_valid, push_data=entry, pop_enable=pop_enable
+        )
 
-    def set_ready(self, index: Value):
+    def set_ready(self, index: Value, actual_branch: Optional[Value] = None) -> None:
         bundle = self.queue[index]
         new_bundle = rob_entry_type.bundle(
             pc=bundle.pc,
             dest_logical=bundle.dest_logical,
             dest_new_physical=bundle.dest_new_physical,
             dest_old_physical=bundle.dest_old_physical,
+            imm=bundle.imm,
             ready=Bits(1)(1),
             is_branch=bundle.is_branch,
             is_alu=bundle.is_alu,
             predict_branch=bundle.predict_branch,
-            actual_branch=bundle.actual_branch,
+            actual_branch=(
+                actual_branch if actual_branch is not None else bundle.actual_branch
+            ),
         )
         self.queue[index] = new_bundle
 
