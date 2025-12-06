@@ -27,9 +27,14 @@ lsq_entry_type = Record(
     lsq_queue_idx=Bits(5),
     address=Bits(data_depth),
     data=Bits(32),
+    rs1_physical=Bits(6),
+    rs2_physical=Bits(6),
+    rd_physical=Bits(6),
     is_load=Bits(1),
     is_store=Bits(1),
     op_type=Bits(3),  # load/store type
+    rs1_needed=Bits(1),
+    rs2_needed=Bits(1),
     # TODO: ad lsq entry status
 )
 
@@ -43,4 +48,6 @@ alu_queue_entry_type = Record(
     rd_physical=Bits(6),
     alu_op=Bits(4),
     imm=Bits(32),
+    rs1_needed=Bits(1),
+    rs2_needed=Bits(1),
 )

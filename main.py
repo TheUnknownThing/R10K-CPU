@@ -40,10 +40,10 @@ def build_cpu(
 
         physical_register_file = RegArray(Bits(32), 64, initializer=[0] * 64)
         """
-        NOTE: register_is_free indicates whether a physical register is free (1) or allocated (0), maintained
-        by the Commit module, while free_list keeps track of free physical registers for renaming.
+        NOTE: register_ready indicates whether a physical register contains valid data. 
+        It is maintained by Writeback stage (sets to 1) and Commit stage (sets to 0).
         """
-        register_is_free = RegArray(Bits(1), 64, initializer=[1] * 64)  # All registers are free at start
+        register_ready = RegArray(Bits(1), 64, initializer=[1] * 64)  # All registers are free at start
 
         driver.build(commit=commit)
 
@@ -52,6 +52,7 @@ def build_cpu(
             map_table_active=map_table_active,
             map_table_0=map_table_0,
             map_table_1=map_table_1,
+            register_ready=register_ready,
         )
 
         free_list.build(

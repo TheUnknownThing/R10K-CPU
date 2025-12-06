@@ -9,7 +9,7 @@ class Commit(Module):
         self.name = "Commit"
 
     @module.combinational
-    def build(self, active_list_queue: CircularQueue, map_table_active: Array, map_table_0: Array, map_table_1: Array):
+    def build(self, active_list_queue: CircularQueue, map_table_active: Array, map_table_0: Array, map_table_1: Array, register_ready: Array):
         """Graduate instructions from the Active List, free physical registers, and recover branch mispredictions."""
 
         front_entry = active_list_queue.front()
@@ -19,6 +19,8 @@ class Commit(Module):
             with Condition(~map_table_active[0]):
                 map_table_1[front_entry.dest_logical] = front_entry.dest_new_physical
             
+            register_ready[front_entry.dest_old_physical] = Bits(1)(0)
+
             with Condition(front_entry.is_branch & (front_entry.predict_branch != front_entry.actual_branch)):
                 map_table_active[0] = ~map_table_active[0]
                 # TODO: add other recovery steps
