@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 from assassyn.frontend import *
 from assassyn.backend import elaborate
 from assassyn.utils import run_simulator
@@ -14,19 +14,18 @@ class Step:
     push: Optional[int] = None # Free (push back)
 
 # Test with 4 registers: 0, 1, 2, 3
-# Initial state: [0, 1, 2, 3], Head=0, Tail=0, Count=4
+# Register 0 is reserved, so FreeList manages 1, 2, 3.
+# Initial state: [1, 2, 3], Head=0, Tail=0, Count=3
 STEPS = [
-    Step(1, pop=True),          # Alloc 0. State: [?, 1, 2, 3], H=1, T=0, C=3
-    Step(2, pop=True),          # Alloc 1. State: [?, ?, 2, 3], H=2, T=0, C=2
-    Step(3, pop=True),          # Alloc 2. State: [?, ?, ?, 3], H=3, T=0, C=1
-    Step(4, pop=True),          # Alloc 3. State: [?, ?, ?, ?], H=0, T=0, C=0 (Empty)
-    Step(5, push=0),            # Free 0.  State: [0, ?, ?, ?], H=0, T=1, C=1
-    Step(6, push=1),            # Free 1.  State: [0, 1, ?, ?], H=0, T=2, C=2
-    Step(7, pop=True),          # Alloc 0. State: [?, 1, ?, ?], H=1, T=2, C=1
-    Step(8, push=2),            # Free 2.  State: [?, 1, 2, ?], H=1, T=3, C=2
-    Step(9, push=3),            # Free 3.  State: [?, 1, 2, 3], H=1, T=0, C=3
-    Step(10, pop=True),         # Alloc 1. State: [?, ?, 2, 3], H=2, T=0, C=2
-    Step(11),                   # Idle
+    Step(1, pop=True),          # Alloc 1. State: [?, 2, 3], H=1, T=0, C=2
+    Step(2, pop=True),          # Alloc 2. State: [?, ?, 3], H=2, T=0, C=1
+    Step(3, pop=True),          # Alloc 3. State: [?, ?, ?], H=0, T=0, C=0 (Empty)
+    Step(5, push=1),            # Free 1.  State: [1, ?, ?], H=0, T=1, C=1
+    Step(6, push=2),            # Free 2.  State: [1, 2, ?], H=0, T=2, C=2
+    Step(7, pop=True),          # Alloc 1. State: [?, 2, ?], H=1, T=2, C=1
+    Step(8, push=3),            # Free 3.  State: [?, 2, 3], H=1, T=0, C=2
+    Step(9, pop=True),          # Alloc 2. State: [?, ?, 3], H=2, T=0, C=1
+    Step(10),                   # Idle
 ]
 
 class Driver(Module):
@@ -86,7 +85,7 @@ class Driver(Module):
             valid,
         ]
         
-        for i in range(self.size):
+        for i in range(self.size - 1):
             log_strings += "{}, "
             args.append(self.free_list.queue[i])
 
@@ -100,7 +99,7 @@ def check(raw: str):
         # cycle: 1, head: 0, tail: 0, count: 4, pop_en: 1, push_en: 0, push_data: 0, alloc_reg: 0, valid: 1, contents: 0, 1, 2, 3, 
         m = re.search(r"cycle: (\d+), head: (\d+), tail: (\d+), count: (\d+), pop_en: (\d+), push_en: (\d+), push_data: (\d+), alloc_reg: (\d+), valid: (\d+), contents: (.*)", line)
         if m:
-            base = {
+            base: dict[str, Any] = {
                 "cycle": int(m.group(1)),
                 "head": int(m.group(2)),
                 "tail": int(m.group(3)),
@@ -126,9 +125,9 @@ def check(raw: str):
             history[data["cycle"]] = data
 
     # Python Golden Model
-    size = 4
-    # Initial state: [0, 1, 2, 3]
-    queue_storage = [i for i in range(size)]
+    size = 3
+    # Initial state: [1, 2, 3]
+    queue_storage = [i + 1 for i in range(size)]
     head = 0
     tail = 0 # In CircularQueue implementation, if count=size, tail == head usually.
     # Wait, let's check CircularQueue implementation details or infer from behavior.
