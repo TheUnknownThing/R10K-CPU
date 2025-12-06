@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 from assassyn.frontend import *
 from dataclass.circular_queue import CircularQueue
-from r10k_cpu.common import rob_entry_type
+from r10k_cpu.common import ROBEntryType
 
 
 @dataclass(frozen=True)
@@ -23,7 +23,7 @@ class ActiveList(Downstream):
 
     def __init__(self, depth: int):
         super().__init__()
-        self.queue = CircularQueue(rob_entry_type, depth)
+        self.queue = CircularQueue(ROBEntryType, depth)
 
     @downstream.combinational
     def build(
@@ -32,7 +32,7 @@ class ActiveList(Downstream):
         pop_enable: Value,
     ):
         push_valid = push_inst.valid.optional(Bits(1)(0))
-        entry = rob_entry_type.bundle(
+        entry = ROBEntryType.bundle(
             pc=push_inst.pc.optional(Bits(32)(0)),
             dest_logical=push_inst.dest_logical.optional(Bits(5)(0)),
             dest_new_physical=push_inst.dest_new_physical.optional(Bits(6)(0)),
@@ -52,7 +52,7 @@ class ActiveList(Downstream):
 
     def set_ready(self, index: Value, actual_branch: Optional[Value] = None) -> None:
         bundle = self.queue[index]
-        new_bundle = rob_entry_type.bundle(
+        new_bundle = ROBEntryType.bundle(
             pc=bundle.pc,
             dest_logical=bundle.dest_logical,
             dest_new_physical=bundle.dest_new_physical,

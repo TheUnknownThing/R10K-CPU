@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from assassyn.frontend import *
 from dataclass.circular_queue import CircularQueue, CircularQueueSelection
-from r10k_cpu.common import alu_queue_entry_type, OperantFrom, OPERANT_FROM_LEN
+from r10k_cpu.common import ALUQueueEntryType, OperantFrom, OPERANT_FROM_LEN
 
 @dataclass(frozen=True)
 class ALUQueuePushEntry:
@@ -21,12 +21,12 @@ class ALUQueue(Downstream):
 
     def __init__(self, depth: int):
         super().__init__()
-        self.queue = CircularQueue(alu_queue_entry_type, depth)
+        self.queue = CircularQueue(ALUQueueEntryType, depth)
     
     @downstream.combinational
     def build(self, push_enable: Value, push_data: ALUQueuePushEntry, pop_enable: Value, active_list_idx: Value):
         # self.queue.operate(pop_enable=pop_enable, push_enable=push_enable, push_data=push_data)
-        entry = alu_queue_entry_type.bundle(
+        entry = ALUQueueEntryType.bundle(
             valid=push_enable.optional(Bits(1)(0)),
             active_list_idx=active_list_idx,
             alu_queue_idx=(self.queue.get_tail().bitcast(UInt(5)) + UInt(1)(1)).bitcast(Bits(5)),  # Next index
@@ -48,7 +48,7 @@ class ALUQueue(Downstream):
 
     def select_first_ready(self, register_ready: Array) -> CircularQueueSelection:
         def selector(value: Value) -> Value:
-            entry = alu_queue_entry_type.view(value)
+            entry = ALUQueueEntryType.view(value)
             
             rs1_needed = (entry.operant1_from == Bits(OPERANT_FROM_LEN)(OperantFrom.RS1.value)) | \
                          (entry.operant2_from == Bits(OPERANT_FROM_LEN)(OperantFrom.RS1.value))

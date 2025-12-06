@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from assassyn.frontend import *
 from dataclass.circular_queue import CircularQueue, CircularQueueSelection
-from r10k_cpu.common import lsq_entry_type
+from r10k_cpu.common import LSQEntryType
 from r10k_cpu.config import data_depth
 
 @dataclass(frozen=True)
@@ -19,11 +19,11 @@ class LSQ(Downstream):
 
     def __init__(self, depth: int):
         super().__init__()
-        self.queue = CircularQueue(lsq_entry_type, depth)
+        self.queue = CircularQueue(LSQEntryType, depth)
     
     @downstream.combinational
     def build(self, push_enable: Value, push_data: LSQPushEntry, pop_enable: Value, active_list_idx: Value):
-        entry = lsq_entry_type.bundle(
+        entry = LSQEntryType.bundle(
             valid=push_enable.optional(Bits(1)(0)),
             active_list_idx=active_list_idx,
             lsq_queue_idx=(self.queue.get_tail().bitcast(UInt(5)) + UInt(1)(1)).bitcast(Bits(5)),  # Next index
@@ -42,7 +42,7 @@ class LSQ(Downstream):
 
     def select_first_ready(self, register_ready: Array) -> CircularQueueSelection:
         def selector(value: Value) -> Value:
-            entry = lsq_entry_type.view(value)
+            entry = LSQEntryType.view(value)
             rs1_ready = self._operand_ready(register_ready, entry.rs1_physical)
             rs2_ready = self._operand_ready(register_ready, entry.rs2_physical)
             

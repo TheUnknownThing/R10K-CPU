@@ -4,7 +4,7 @@ from assassyn.frontend import Bits, Record
 
 # TODO: This is subject to change based on design
 
-rob_entry_type = Record(
+ROBEntryType = Record(
     pc=Bits(32),
     dest_logical=Bits(5),
     dest_new_physical=Bits(6),
@@ -29,7 +29,7 @@ class MemoryOpType(Enum):
 MEMORY_OP_TYPE_LEN = ceil(log2(len(MemoryOpType)))
 
 
-lsq_entry_type = Record(
+LSQEntryType = Record(
     valid=Bits(1),
     active_list_idx=Bits(5),
     lsq_queue_idx=Bits(5),
@@ -71,7 +71,7 @@ OPERANT_FROM_LEN = ceil(log2(len(OperantFrom)))
 
 
 # NOTE: this is subject to change based on design
-alu_queue_entry_type = Record(
+ALUQueueEntryType = Record(
     valid=Bits(1),
     active_list_idx=Bits(5),
     alu_queue_idx=Bits(5),
