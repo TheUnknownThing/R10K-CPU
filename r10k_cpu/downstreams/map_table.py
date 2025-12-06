@@ -28,16 +28,12 @@ class MapTable(Downstream):
         self.physical_bits = physical_bits
         self._index_bits = max(1, math.ceil(math.log2(num_logical)))
         self._storage_bits = num_logical * physical_bits
-        
-        initializer = [i for i in range(num_logical)]
-
-        packed_init = self._pack_initializer(initializer)
 
         storage_dtype = Bits(self._storage_bits)
 
         # _spec_table holds the speculative mappings, commit_table holds the committed mappings
-        self._spec_table = RegArray(storage_dtype, 1, initializer=[packed_init])
-        self._commit_table = RegArray(storage_dtype, 1, initializer=[packed_init])
+        self._spec_table = RegArray(storage_dtype, 1, initializer=[0])
+        self._commit_table = RegArray(storage_dtype, 1, initializer=[0])
 
         self._index_literals = [Bits(self._index_bits)(i) for i in range(num_logical)]
         self._entry_ranges = [
@@ -133,10 +129,3 @@ class MapTable(Downstream):
             result = match.select(chunk, result)
 
         return result
-
-    def _pack_initializer(self, values: Sequence[int]) -> int:
-        mask = (1 << self.physical_bits) - 1
-        total = 0
-        for idx, value in enumerate(values):
-            total |= (value & mask) << (idx * self.physical_bits)
-        return total
