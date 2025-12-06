@@ -54,6 +54,8 @@ class Driver(Module):
         push_rd = Bits(6)(0)
         push_op = Bits(4)(0)
         push_imm = Bits(32)(0)
+        push_rs1_needed = Bits(1)(0)
+        push_rs2_needed = Bits(1)(0)
         active_idx = Bits(5)(0)
 
         for step in STEPS:
@@ -65,6 +67,8 @@ class Driver(Module):
                 push_rd = cond.select(Bits(6)(step.push["rd"]), push_rd)
                 push_op = cond.select(Bits(4)(step.push["alu_op"]), push_op)
                 push_imm = cond.select(Bits(32)(step.push["imm"]), push_imm)
+                push_rs1_needed = cond.select(Bits(1)(1), push_rs1_needed)
+                push_rs2_needed = cond.select(Bits(1)(1), push_rs2_needed)
                 active_idx = cond.select(Bits(5)(step.push["active_idx"]), active_idx)
 
             if step.pop:
@@ -76,6 +80,8 @@ class Driver(Module):
             rd_physical=push_rd,
             alu_op=push_op,
             imm=push_imm,
+            rs1_needed=push_rs1_needed,
+            rs2_needed=push_rs2_needed,
         )
 
         self.queue.build(push_en, push_entry, pop_en, active_idx)

@@ -54,6 +54,11 @@ class Driver(Module):
         push_is_load = Bits(1)(0)
         push_is_store = Bits(1)(0)
         push_op = Bits(3)(0)
+        push_rd = Bits(6)(0)
+        push_rs1 = Bits(6)(0)
+        push_rs2 = Bits(6)(0)
+        push_rs1_needed = Bits(1)(1)
+        push_rs2_needed = Bits(1)(1)
         active_idx = Bits(5)(0)
 
         for idx, step in enumerate(STEPS):
@@ -65,6 +70,11 @@ class Driver(Module):
                 push_is_load = cond.select(Bits(1)(step.push["is_load"]), push_is_load)
                 push_is_store = cond.select(Bits(1)(step.push["is_store"]), push_is_store)
                 push_op = cond.select(Bits(3)(step.push["op_type"]), push_op)
+                push_rd = cond.select(Bits(6)((idx + 1) % 64), push_rd)
+                push_rs1 = cond.select(Bits(6)((idx + 2) % 64), push_rs1)
+                push_rs2 = cond.select(Bits(6)((idx + 3) % 64), push_rs2)
+                push_rs1_needed = cond.select(Bits(1)(1), push_rs1_needed)
+                push_rs2_needed = cond.select(Bits(1)(1), push_rs2_needed)
                 active_idx = cond.select(Bits(5)(idx), active_idx)
 
             if step.pop:
@@ -76,6 +86,11 @@ class Driver(Module):
             is_load=push_is_load,
             is_store=push_is_store,
             op_type=push_op,
+            rd_physical=push_rd,
+            rs1_physical=push_rs1,
+            rs2_physical=push_rs2,
+            rs1_needed=push_rs1_needed,
+            rs2_needed=push_rs2_needed,
         )
 
         self.queue.build(push_en, push_entry, pop_en, active_idx)
