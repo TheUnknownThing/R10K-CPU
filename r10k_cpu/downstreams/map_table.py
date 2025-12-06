@@ -58,28 +58,23 @@ class MapTable(Downstream):
     def build(
         self,
         *,
-        rename_write: Optional[MapTableWriteEntry] = None,
-        commit_write: Optional[MapTableWriteEntry] = None,
-        flush_to_commit: Optional[Value] = None,
+        rename_write: MapTableWriteEntry ,
+        commit_write: MapTableWriteEntry,
+        flush_to_commit: Value,
     ) -> None:
-        rename_port = rename_write if rename_write is not None else self.idle_port()
-        commit_port = commit_write if commit_write is not None else self.idle_port()
+        rename_en = rename_write.enable
+        rename_logical = rename_write.logical_idx
+        rename_physical = rename_write.physical_value
 
-        rename_en = rename_port.enable
-        rename_logical = rename_port.logical_idx
-        rename_physical = rename_port.physical_value
-
-        commit_en = commit_port.enable
-        commit_logical = commit_port.logical_idx
-        commit_physical = commit_port.physical_value
-
-        flush = flush_to_commit if flush_to_commit is not None else self._zero_enable
+        commit_en = commit_write.enable
+        commit_logical = commit_write.logical_idx
+        commit_physical = commit_write.physical_value
 
         spec_bits = self._spec_table[0].bitcast(UInt(self._storage_bits))
         commit_bits = self._commit_table[0].bitcast(UInt(self._storage_bits))
 
         commit_bits_next = self._apply_write(commit_bits, commit_en, commit_logical, commit_physical)
-        spec_after_flush = flush.select(commit_bits_next, spec_bits)
+        spec_after_flush = flush_to_commit.select(commit_bits_next, spec_bits)
         spec_bits_next = self._apply_write(spec_after_flush, rename_en, rename_logical, rename_physical)
 
         self._commit_table[0] = commit_bits_next.bitcast(Bits(self._storage_bits))
@@ -98,14 +93,6 @@ class MapTable(Downstream):
 
     def commit_state(self) -> Value:
         return self._commit_table[0]
-
-    def idle_port(self) -> MapTableWriteEntry:
-        """idle_port returns no-op write entry."""
-        return MapTableWriteEntry(
-            enable=self._zero_enable,
-            logical_idx=self._zero_index,
-            physical_value=self._zero_physical,
-        )
 
     def _apply_write(
         self,
