@@ -113,16 +113,10 @@ class CircularQueue:
 
         return pop_data
 
-    def choose(self, selector: Callable[[Any], Value]) -> CircularQueueSelection:
+    def choose(self, selector: Callable[[ArrayRead], Value]) -> CircularQueueSelection:
         """Choose the first element in the queue matching the given selector."""
 
-        def to_value(value_like) -> Value:
-            if isinstance(value_like, RecordValue):
-                return value_like.value()
-            else:
-                return value_like
-
-        selected_data = to_value(self._storage[0])
+        selected_data = self._storage[0]
         selected_index = self._zero_addr
         selected_distance = self._zero
         selected_valid = Bits(1)(0)
@@ -134,7 +128,7 @@ class CircularQueue:
         for offset in range(self.depth):
             offset_uint = UInt(self.count_bits)(offset)
             has_entry = offset_uint < count_uint
-            value = to_value(self._storage[pointer])
+            value = self._storage[pointer]
             matches = selector(value).bitcast(Bits(1))
             candidate_valid = has_entry & matches
             new_hit = candidate_valid & ~selected_valid
