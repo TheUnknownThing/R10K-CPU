@@ -28,6 +28,9 @@ STEPS = [
             "imm": 0x100,
             "is_branch": 0,
             "predict_branch": 0,
+            "is_jump": 0,
+            "is_jalr": 0,
+            "is_terminator": 0,
         },
     ),
     Step(
@@ -40,6 +43,9 @@ STEPS = [
             "imm": 0x200,
             "is_branch": 0,
             "predict_branch": 0,
+            "is_jump": 1,
+            "is_jalr": 0,
+            "is_terminator": 0,
         },
     ),
     Step(
@@ -52,6 +58,9 @@ STEPS = [
             "imm": 0x300,
             "is_branch": 1,
             "predict_branch": 1,
+            "is_jump": 0,
+            "is_jalr": 0,
+            "is_terminator": 0,
         },
     ),
     Step(4, set_ready=0),  # Set first instruction ready. Index 0 (head)
@@ -68,6 +77,9 @@ STEPS = [
             "imm": 0x400,
             "is_branch": 0,
             "predict_branch": 0,
+            "is_jump": 0,
+            "is_jalr": 1,
+            "is_terminator": 0,
         },
     ),
     Step(9, set_ready=2, actual_branch=0),  # Set third instruction ready. Index 2.
@@ -84,6 +96,9 @@ STEPS = [
             "imm": 0x500,
             "is_branch": 1,
             "predict_branch": 0,
+            "is_jump": 0,
+            "is_jalr": 0,
+            "is_terminator": 1,
         },
     ),
     Step(14, set_ready=4, actual_branch=1),
@@ -118,6 +133,9 @@ class Driver(Module):
         push_is_branch = Bits(1)(0)
         push_is_alu = Bits(1)(1)
         push_predict_branch = Bits(1)(0)
+        push_is_jump = Bits(1)(0)
+        push_is_jalr = Bits(1)(0)
+        push_is_terminator = Bits(1)(0)
 
         pop_enable = Bits(1)(0)
 
@@ -140,6 +158,9 @@ class Driver(Module):
                 push_is_branch = cond.select(Bits(1)(step.push["is_branch"]), push_is_branch)
                 push_is_alu = cond.select(Bits(1)(step.push.get("is_alu", 1)), push_is_alu)
                 push_predict_branch = cond.select(Bits(1)(step.push["predict_branch"]), push_predict_branch)
+                push_is_jump = cond.select(Bits(1)(step.push.get("is_jump", 0)), push_is_jump)
+                push_is_jalr = cond.select(Bits(1)(step.push.get("is_jalr", 0)), push_is_jalr)
+                push_is_terminator = cond.select(Bits(1)(step.push.get("is_terminator", 0)), push_is_terminator)
 
             if step.retire:
                 pop_enable = cond.select(Bits(1)(1), pop_enable)
@@ -161,6 +182,9 @@ class Driver(Module):
             is_branch=push_is_branch,
             is_alu=push_is_alu,
             predict_branch=push_predict_branch,
+            is_jump=push_is_jump,
+            is_jalr=push_is_jalr,
+            is_terminator=push_is_terminator,
         )
 
         self.active_list.build(push_inst, pop_enable)
@@ -192,12 +216,15 @@ class Driver(Module):
         ]
 
         for i in range(self.depth):
-            log_strings += "({}, {}, {}, {}), "
+            log_strings += "({}, {}, {}, {}, {}, {}, {}), "
             entry = self.active_list.queue[i]
             args.append(entry.pc)
             args.append(entry.ready)
             args.append(entry.imm)
             args.append(entry.actual_branch)
+            args.append(entry.is_jump)
+            args.append(entry.is_jalr)
+            args.append(entry.is_terminator)
 
         log(log_strings, *args)
 
@@ -227,10 +254,21 @@ def check(raw: str):
             }
             # Parse contents
             contents_str = line.split("contents: ")[1]
-            # (pc, ready, imm, actual_branch), ...
+            # (pc, ready, imm, actual_branch, is_jump, is_jalr, is_terminator), ...
             # Use regex to find all pairs
-            pairs = re.findall(r"\((\d+), (\d+), (\d+), (\d+)\)", contents_str)
-            base["contents"] = [{"pc": int(p[0]), "ready": int(p[1]), "imm": int(p[2]), "actual_branch": int(p[3])} for p in pairs]
+            pairs = re.findall(r"\((\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+)\)", contents_str)
+            base["contents"] = [
+                {
+                    "pc": int(p[0]),
+                    "ready": int(p[1]),
+                    "imm": int(p[2]),
+                    "actual_branch": int(p[3]),
+                    "is_jump": int(p[4]),
+                    "is_jalr": int(p[5]),
+                    "is_terminator": int(p[6]),
+                }
+                for p in pairs
+            ]
             return base
         return None
 
@@ -242,7 +280,18 @@ def check(raw: str):
 
     # Python Golden Model
     depth = 16
-    queue_storage = [{"pc": 0, "ready": 0, "imm": 0, "actual_branch": 0} for _ in range(depth)]
+    queue_storage = [
+        {
+            "pc": 0,
+            "ready": 0,
+            "imm": 0,
+            "actual_branch": 0,
+            "is_jump": 0,
+            "is_jalr": 0,
+            "is_terminator": 0,
+        }
+        for _ in range(depth)
+    ]
     head = 0
     tail = 0
     count = 0
@@ -278,16 +327,33 @@ def check(raw: str):
             expected_ready = queue_storage[i]["ready"]
             expected_imm = queue_storage[i]["imm"]
             expected_actual_branch = queue_storage[i]["actual_branch"]
+            expected_is_jump = queue_storage[i]["is_jump"]
+            expected_is_jalr = queue_storage[i]["is_jalr"]
+            expected_is_terminator = queue_storage[i]["is_terminator"]
             got_pc = log_entry["contents"][i]["pc"]
             got_ready = log_entry["contents"][i]["ready"]
             got_imm = log_entry["contents"][i]["imm"]
             got_actual_branch = log_entry["contents"][i]["actual_branch"]
+            got_is_jump = log_entry["contents"][i]["is_jump"]
+            got_is_jalr = log_entry["contents"][i]["is_jalr"]
+            got_is_terminator = log_entry["contents"][i]["is_terminator"]
             assert got_pc == expected_pc, f"Cycle {c}, Index {i}: Expected pc {expected_pc}, got {got_pc}"
             assert (
                 got_ready == expected_ready
             ), f"Cycle {c}, Index {i}: Expected ready {expected_ready}, got {got_ready}"
             assert got_imm == expected_imm, f"Cycle {c}, Index {i}: Expected imm {expected_imm}, got {got_imm}"
-            assert got_actual_branch == expected_actual_branch, f"Cycle {c}, Index {i}: Expected actual_branch {expected_actual_branch}, got {got_actual_branch}"
+            assert (
+                got_actual_branch == expected_actual_branch
+            ), f"Cycle {c}, Index {i}: Expected actual_branch {expected_actual_branch}, got {got_actual_branch}"
+            assert (
+                got_is_jump == expected_is_jump
+            ), f"Cycle {c}, Index {i}: Expected is_jump {expected_is_jump}, got {got_is_jump}"
+            assert (
+                got_is_jalr == expected_is_jalr
+            ), f"Cycle {c}, Index {i}: Expected is_jalr {expected_is_jalr}, got {got_is_jalr}"
+            assert (
+                got_is_terminator == expected_is_terminator
+            ), f"Cycle {c}, Index {i}: Expected is_terminator {expected_is_terminator}, got {got_is_terminator}"
 
         # 2. Apply operations for NEXT cycle
         step = step_map.get(c)
@@ -315,6 +381,9 @@ def check(raw: str):
             queue_storage[tail]["ready"] = 0  # Reset ready on new push
             queue_storage[tail]["imm"] = push_data["imm"]
             queue_storage[tail]["actual_branch"] = 0
+            queue_storage[tail]["is_jump"] = push_data.get("is_jump", 0)
+            queue_storage[tail]["is_jalr"] = push_data.get("is_jalr", 0)
+            queue_storage[tail]["is_terminator"] = push_data.get("is_terminator", 0)
             tail = (tail + 1) % depth
 
         # Apply Retire (Pop)

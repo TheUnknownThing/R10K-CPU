@@ -2,7 +2,6 @@ from enum import Enum
 from math import ceil, log2
 from assassyn.frontend import Bits, Record
 
-# TODO: This is subject to change based on design
 
 ROBEntryType = Record(
     pc=Bits(32),
@@ -15,6 +14,9 @@ ROBEntryType = Record(
     is_alu=Bits(1),  # 1 for ALU, 0 for LSQ
     predict_branch=Bits(1),
     actual_branch=Bits(1),  # waiting ALU to fill this in
+    is_jump=Bits(1),
+    is_jalr=Bits(1),
+    is_terminator=Bits(1),  # for ebreak
 )
 
 
@@ -70,7 +72,6 @@ class OperantFrom(Enum):
 OPERANT_FROM_LEN = ceil(log2(len(OperantFrom)))
 
 
-# NOTE: this is subject to change based on design
 ALUQueueEntryType = Record(
     valid=Bits(1),
     active_list_idx=Bits(5),

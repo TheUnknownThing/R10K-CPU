@@ -16,6 +16,9 @@ class InstructionPushEntry:
     is_branch: Value
     is_alu: Value
     predict_branch: Value
+    is_jump: Value
+    is_jalr: Value
+    is_terminator: Value
 
 
 class ActiveList(Downstream):
@@ -43,6 +46,9 @@ class ActiveList(Downstream):
             is_alu=push_inst.is_alu.optional(Bits(1)(0)),
             predict_branch=push_inst.predict_branch.optional(Bits(1)(0)),
             actual_branch=Bits(1)(0),
+            is_jump=push_inst.is_jump.optional(Bits(1)(0)),
+            is_jalr=push_inst.is_jalr.optional(Bits(1)(0)),
+            is_terminator=push_inst.is_terminator.optional(Bits(1)(0)),
         )
         pop_enable = pop_enable.optional(Bits(1)(0))
 
@@ -65,6 +71,9 @@ class ActiveList(Downstream):
             actual_branch=(
                 actual_branch if actual_branch is not None else bundle.actual_branch
             ),
+            is_jump=bundle.is_jump,
+            is_jalr=bundle.is_jalr,
+            is_terminator=bundle.is_terminator,
         )
         self.queue[index] = new_bundle
 
