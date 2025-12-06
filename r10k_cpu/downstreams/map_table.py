@@ -69,9 +69,11 @@ class MapTable(Downstream):
         spec_bits = self._spec_table[0].bitcast(UInt(self._storage_bits))
         commit_bits = self._commit_table[0].bitcast(UInt(self._storage_bits))
 
+        flush_bit = flush_to_commit.bitcast(Bits(1))
+
         commit_bits_next = self._apply_write(commit_bits, commit_en, commit_logical, commit_physical)
-        spec_after_flush = flush_to_commit.select(commit_bits_next, spec_bits)
-        spec_bits_next = self._apply_write(spec_after_flush, rename_en, rename_logical, rename_physical)
+        spec_after_flush = flush_bit.select(commit_bits_next, spec_bits)
+        spec_bits_next = self._apply_write(spec_after_flush, flush_bit.select(self._zero_enable, rename_en), rename_logical, rename_physical)
 
         self._commit_table[0] = commit_bits_next.bitcast(Bits(self._storage_bits))
         self._spec_table[0] = spec_bits_next.bitcast(Bits(self._storage_bits))

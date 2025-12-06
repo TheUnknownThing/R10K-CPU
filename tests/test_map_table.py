@@ -159,8 +159,8 @@ def check(raw: str):
         }
         history[data["cycle"]] = data
 
-    spec_state = [i for i in range(32)]
-    commit_state = [i for i in range(32)]
+    spec_state = [0] * 32
+    commit_state = [0] * 32
 
     step_map = {step.cycle: step for step in STEPS}
     max_cycle = max(STEPS, key=lambda s: s.cycle).cycle
