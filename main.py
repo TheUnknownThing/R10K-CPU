@@ -6,6 +6,7 @@ from r10k_cpu.downstreams.free_list import FreeList
 from r10k_cpu.downstreams.active_list import ActiveList
 from r10k_cpu.downstreams.alu_queue import ALUQueue
 from r10k_cpu.downstreams.lsq import LSQ
+from r10k_cpu.downstreams.map_table import MapTable, MapTableWriteEntry
 from r10k_cpu.modules.commit import Commit
 from r10k_cpu.modules.driver import Driver
 
@@ -33,26 +34,40 @@ def build_cpu(
         active_list = ActiveList(depth=2**5)  # Active List depth = 32
         alu_queue = ALUQueue(depth=2**5)  # ALU Queue depth = 32
         lsq = LSQ(depth=2**5)  # LSQ depth = 32
-
-        map_table_0 = RegArray(Bits(6), 32, initializer=[i for i in range(32)])
-        map_table_1 = RegArray(Bits(6), 32, initializer=[i for i in range(32)])
-        map_table_active = RegArray(Bits(1), 1, initializer=[0])  # 0 for map_table_0, 1 for map_table_1
+        map_table = MapTable(num_logical=32, physical_bits=6)
 
         physical_register_file = RegArray(Bits(32), 64, initializer=[0] * 64)
-        """
-        NOTE: register_ready indicates whether a physical register contains valid data. 
-        It is maintained by Writeback stage (sets to 1) and Commit stage (sets to 0).
-        """
+        # NOTE: register_ready indicates whether a physical register contains valid data.
+        # It is maintained by Writeback stage (sets to 1) and Commit stage (sets to 0).
         register_ready = RegArray(Bits(1), 64, initializer=[1] * 64)  # All registers are free at start
 
         driver.build(commit=commit)
 
-        pop_instruction, alu_pop, mem_pop, old_physical = commit.build(
+        (
+            pop_instruction,
+            alu_pop,
+            mem_pop,
+            old_physical,
+            commit_write_enable,
+            commit_logical,
+            commit_physical,
+            flush_recover,
+        ) = commit.build(
             active_list_queue=active_list.queue,
-            map_table_active=map_table_active,
-            map_table_0=map_table_0,
-            map_table_1=map_table_1,
             register_ready=register_ready,
+        )
+
+        rename_write = map_table.idle_port() # TODO: rename_write needs to be set to ID's return signal
+        commit_write = MapTableWriteEntry(
+            enable=commit_write_enable,
+            logical_idx=commit_logical,
+            physical_value=commit_physical,
+        )
+
+        map_table.build(
+            rename_write=rename_write,
+            commit_write=commit_write,
+            flush_to_commit=flush_recover,
         )
 
         free_list.build(
@@ -75,8 +90,6 @@ def build_cpu(
             pop_enable=mem_pop,
             # TODO: push_enable and push_data need to be set to ID's return signal
         )
-
-        pass
 
     print(sys)
     conf = config(
