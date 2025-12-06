@@ -5,6 +5,7 @@ from dataclass.circular_queue import CircularQueue
 
 class FreeList(Downstream):
     queue: CircularQueue
+    zero_reg: Value
 
     def __init__(self, register_number: int):
         super().__init__()
@@ -13,6 +14,7 @@ class FreeList(Downstream):
         # Initialize the free list with all registers available, except register 0 which is reserved
         initializer = [i + 1 for i in range(register_number - 1)]
         self.queue = CircularQueue(Bits(bits), register_number - 1, initializer=initializer, default_count=register_number - 1)
+        self.zero_reg = Bits(bits)(0)
 
     @downstream.combinational
     def build(self, pop_enable: Value, push_enable: Value, push_data: Value):
