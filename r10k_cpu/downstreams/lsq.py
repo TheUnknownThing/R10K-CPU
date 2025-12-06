@@ -36,6 +36,7 @@ class LSQ(Downstream):
             is_load=push_data.is_load.optional(Bits(1)(0)),
             is_store=push_data.is_store.optional(Bits(1)(0)),
             op_type=push_data.op_type.optional(Bits(3)(0)),
+            rd_physical=push_data.rd_physical.optional(Bits(6)(0)),
             rs1_physical=push_data.rs1_physical.optional(Bits(6)(0)),
             rs2_physical=push_data.rs2_physical.optional(Bits(6)(0)),
             rs1_needed=push_data.rs1_needed.optional(Bits(1)(1)),
