@@ -42,6 +42,34 @@ lsq_entry_type = Record(
     op_type=Bits(MEMORY_OP_TYPE_LEN),
 )
 
+
+class RV32I_ALU_Code(Enum):
+    ADD = 0
+    SUB = 1
+    SLL = 2
+    SLT = 3
+    SLTU = 4
+    XOR = 5
+    SRA = 6
+    SRL = 7
+    OR = 8
+    AND = 9
+
+
+ALU_CODE_LEN = ceil(log2(len(RV32I_ALU_Code)))
+
+
+class OperantFrom(Enum):
+    RS1 = 0
+    RS2 = 1
+    IMM = 2
+    PC = 3
+    LITERAL_FOUR = 4
+
+
+OPERANT_FROM_LEN = ceil(log2(len(OperantFrom)))
+
+
 # NOTE: this is subject to change based on design
 alu_queue_entry_type = Record(
     valid=Bits(1),
@@ -50,9 +78,11 @@ alu_queue_entry_type = Record(
     rs1_physical=Bits(6),
     rs2_physical=Bits(6),
     rd_physical=Bits(6),
-    alu_op=Bits(4),
+    alu_op=Bits(ALU_CODE_LEN),
     imm=Bits(32),
-    rs1_needed=Bits(1),
-    rs2_needed=Bits(1),
+    operant1_from=Bits(OPERANT_FROM_LEN),
+    operant2_from=Bits(OPERANT_FROM_LEN),
     PC=Bits(32),
+    is_branch=Bits(1),
+    branch_flip=Bits(1),
 )

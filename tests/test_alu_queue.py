@@ -19,10 +19,10 @@ class Step:
 
 DEPTH = 4
 STEPS = [
-    Step(1, push={"rs1": 1, "rs2": 2, "rd": 10, "alu_op": 1, "imm": 0x10, "active_idx": 3, "pc": 0x1000}),
-    Step(2, push={"rs1": 4, "rs2": 5, "rd": 11, "alu_op": 2, "imm": 0x20, "active_idx": 4, "pc": 0x1004}),
+    Step(1, push={"rs1": 1, "rs2": 2, "rd": 10, "alu_op": 1, "imm": 0x10, "active_idx": 3, "pc": 0x1000, "op1_from": 0, "op2_from": 1}),
+    Step(2, push={"rs1": 4, "rs2": 5, "rd": 11, "alu_op": 2, "imm": 0x20, "active_idx": 4, "pc": 0x1004, "op1_from": 0, "op2_from": 2}), # op2 from IMM
     Step(3, pop=True),
-    Step(4, push={"rs1": 6, "rs2": 7, "rd": 12, "alu_op": 3, "imm": 0x30, "active_idx": 5, "pc": 0x1008}, pop=True),
+    Step(4, push={"rs1": 6, "rs2": 7, "rd": 12, "alu_op": 3, "imm": 0x30, "active_idx": 5, "pc": 0x1008, "is_branch": 1}, pop=True),
     Step(5, push={"rs1": 8, "rs2": 9, "rd": 13, "alu_op": 4, "imm": 0x40, "active_idx": 6, "pc": 0x100C}),
     Step(6, pop=True),
     Step(7, pop=True),
@@ -54,8 +54,10 @@ class Driver(Module):
         push_rd = Bits(6)(0)
         push_op = Bits(4)(0)
         push_imm = Bits(32)(0)
-        push_rs1_needed = Bits(1)(0)
-        push_rs2_needed = Bits(1)(0)
+        push_op1_from = Bits(3)(0)
+        push_op2_from = Bits(3)(0)
+        push_is_branch = Bits(1)(0)
+        push_branch_flip = Bits(1)(0)
         active_idx = Bits(5)(0)
         push_pc = Bits(32)(0)
 
@@ -68,8 +70,10 @@ class Driver(Module):
                 push_rd = cond.select(Bits(6)(step.push["rd"]), push_rd)
                 push_op = cond.select(Bits(4)(step.push["alu_op"]), push_op)
                 push_imm = cond.select(Bits(32)(step.push["imm"]), push_imm)
-                push_rs1_needed = cond.select(Bits(1)(1), push_rs1_needed)
-                push_rs2_needed = cond.select(Bits(1)(1), push_rs2_needed)
+                push_op1_from = cond.select(Bits(3)(step.push.get("op1_from", 0)), push_op1_from)
+                push_op2_from = cond.select(Bits(3)(step.push.get("op2_from", 1)), push_op2_from)
+                push_is_branch = cond.select(Bits(1)(step.push.get("is_branch", 0)), push_is_branch)
+                push_branch_flip = cond.select(Bits(1)(step.push.get("branch_flip", 0)), push_branch_flip)
                 active_idx = cond.select(Bits(5)(step.push["active_idx"]), active_idx)
                 push_pc = cond.select(Bits(32)(step.push["pc"]), push_pc)
 
@@ -82,8 +86,10 @@ class Driver(Module):
             rd_physical=push_rd,
             alu_op=push_op,
             imm=push_imm,
-            rs1_needed=push_rs1_needed,
-            rs2_needed=push_rs2_needed,
+            operant1_from=push_op1_from,
+            operant2_from=push_op2_from,
+            is_branch=push_is_branch,
+            branch_flip=push_branch_flip,
             PC=push_pc,
         )
 
@@ -111,7 +117,7 @@ class Driver(Module):
 
         for i in range(self.depth):
             entry = self.queue.queue._dtype.view(self.queue.queue[i])
-            log_str += f"E{i}:{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}}; "
+            log_str += f"E{i}:{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}}; "
             args.extend(
                 [
                     entry.valid,
@@ -122,6 +128,10 @@ class Driver(Module):
                     entry.rd_physical,
                     entry.alu_op,
                     entry.imm,
+                    entry.operant1_from,
+                    entry.operant2_from,
+                    entry.is_branch,
+                    entry.branch_flip,
                     entry.PC,
                 ]
             )
@@ -140,7 +150,7 @@ def parse_line(line: str) -> Optional[Dict[str, Any]]:
 
     entry_block = base_match.group(12)
     entries: Dict[int, Dict[str, int]] = {}
-    for match in re.finditer(r"E(\d+):([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+);", entry_block):
+    for match in re.finditer(r"E(\d+):([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+);", entry_block):
         idx = int(match.group(1))
         entries[idx] = {
             "valid": int(match.group(2)),
@@ -151,7 +161,11 @@ def parse_line(line: str) -> Optional[Dict[str, Any]]:
             "rd": int(match.group(7)),
             "op": int(match.group(8)),
             "imm": int(match.group(9)),
-            "pc": int(match.group(10)),
+            "op1_from": int(match.group(10)),
+            "op2_from": int(match.group(11)),
+            "is_branch": int(match.group(12)),
+            "branch_flip": int(match.group(13)),
+            "pc": int(match.group(14)),
         }
 
     return {
@@ -181,7 +195,21 @@ def check(raw: str):
     step_map = {step.cycle: step for step in STEPS}
 
     queue_storage: List[Dict[str, int]] = [
-        {"valid": 0, "active_idx": 0, "alu_idx": 0, "rs1": 0, "rs2": 0, "rd": 0, "op": 0, "imm": 0, "pc": 0}
+        {
+            "valid": 0,
+            "active_idx": 0,
+            "alu_idx": 0,
+            "rs1": 0,
+            "rs2": 0,
+            "rd": 0,
+            "op": 0,
+            "imm": 0,
+            "op1_from": 0,
+            "op2_from": 0,
+            "is_branch": 0,
+            "branch_flip": 0,
+            "pc": 0,
+        }
         for _ in range(DEPTH)
     ]
     head = 0
@@ -232,6 +260,10 @@ def check(raw: str):
                 "rd": push["rd"],
                 "op": push["alu_op"],
                 "imm": push["imm"],
+                "op1_from": push.get("op1_from", 0),
+                "op2_from": push.get("op2_from", 1),
+                "is_branch": push.get("is_branch", 0),
+                "branch_flip": push.get("branch_flip", 0),
                 "pc": push["pc"],
             }
             queue_storage[tail] = entry
