@@ -100,24 +100,24 @@ class MapTable(Downstream):
         enable_bit = enable.bitcast(Bits(1))
         idx_bits = logical_idx.bitcast(Bits(self._index_bits))
         phys_bits = physical_value.bitcast(Bits(self.physical_bits))
+        base_bits = base_value.bitcast(Bits(self._storage_bits))
 
-        base_uint = base_value.bitcast(UInt(self._storage_bits))
-        idx_uint = idx_bits.bitcast(UInt(self._index_bits))
-        idx_wide = idx_uint.zext(UInt(self._storage_bits))
-        shift_amount = idx_wide * self._entry_stride
-        mask = self._entry_mask << shift_amount
-        inverted_mask = (~mask).bitcast(UInt(self._storage_bits))
-        cleared = base_uint & inverted_mask
+        chunks = []
+        for i in range(self.num_logical):
+            lo, hi = self._entry_ranges[i]
+            chunk = base_bits[lo:hi]
+            
+            is_target = (idx_bits == self._index_literals[i])
+            should_update = is_target & enable_bit
+            
+            new_chunk = should_update.select(phys_bits, chunk)
+            chunks.append(new_chunk)
 
-        phys_uint = phys_bits.bitcast(UInt(self.physical_bits))
-        phys_wide = phys_uint.zext(UInt(self._storage_bits))
-        shifted = phys_wide << shift_amount
+        # Concatenate chunks. concat expects MSB first, so we reverse the list.
+        # chunks[0] is LSB (index 0), chunks[-1] is MSB.
+        result = concat(*reversed(chunks))
 
-        updated = cleared | shifted
-        updated_bits = updated.bitcast(Bits(self._storage_bits))
-        base_bits = base_uint.bitcast(Bits(self._storage_bits))
-        selected_bits = enable_bit.select(updated_bits, base_bits)
-        return selected_bits.bitcast(UInt(self._storage_bits))
+        return result.bitcast(UInt(self._storage_bits))
 
     def _read_entry(self, table_value: Value, logical_idx: Value) -> Value:
         idx_bits = logical_idx.bitcast(Bits(self._index_bits))
