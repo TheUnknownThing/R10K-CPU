@@ -50,4 +50,5 @@ alu_queue_entry_type = Record(
     imm=Bits(32),
     rs1_needed=Bits(1),
     rs2_needed=Bits(1),
+    PC=Bits(32),
 )

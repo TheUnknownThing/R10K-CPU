@@ -19,14 +19,14 @@ class Step:
 
 DEPTH = 4
 STEPS = [
-    Step(1, push={"rs1": 1, "rs2": 2, "rd": 10, "alu_op": 1, "imm": 0x10, "active_idx": 3}),
-    Step(2, push={"rs1": 4, "rs2": 5, "rd": 11, "alu_op": 2, "imm": 0x20, "active_idx": 4}),
+    Step(1, push={"rs1": 1, "rs2": 2, "rd": 10, "alu_op": 1, "imm": 0x10, "active_idx": 3, "pc": 0x1000}),
+    Step(2, push={"rs1": 4, "rs2": 5, "rd": 11, "alu_op": 2, "imm": 0x20, "active_idx": 4, "pc": 0x1004}),
     Step(3, pop=True),
-    Step(4, push={"rs1": 6, "rs2": 7, "rd": 12, "alu_op": 3, "imm": 0x30, "active_idx": 5}, pop=True),
-    Step(5, push={"rs1": 8, "rs2": 9, "rd": 13, "alu_op": 4, "imm": 0x40, "active_idx": 6}),
+    Step(4, push={"rs1": 6, "rs2": 7, "rd": 12, "alu_op": 3, "imm": 0x30, "active_idx": 5, "pc": 0x1008}, pop=True),
+    Step(5, push={"rs1": 8, "rs2": 9, "rd": 13, "alu_op": 4, "imm": 0x40, "active_idx": 6, "pc": 0x100C}),
     Step(6, pop=True),
     Step(7, pop=True),
-    Step(8, push={"rs1": 10, "rs2": 11, "rd": 14, "alu_op": 5, "imm": 0x50, "active_idx": 7}),
+    Step(8, push={"rs1": 10, "rs2": 11, "rd": 14, "alu_op": 5, "imm": 0x50, "active_idx": 7, "pc": 0x1010}),
     Step(9, pop=True),
 ]
 
@@ -57,6 +57,7 @@ class Driver(Module):
         push_rs1_needed = Bits(1)(0)
         push_rs2_needed = Bits(1)(0)
         active_idx = Bits(5)(0)
+        push_pc = Bits(32)(0)
 
         for step in STEPS:
             cond = cycle_val == UInt(32)(step.cycle)
@@ -70,6 +71,7 @@ class Driver(Module):
                 push_rs1_needed = cond.select(Bits(1)(1), push_rs1_needed)
                 push_rs2_needed = cond.select(Bits(1)(1), push_rs2_needed)
                 active_idx = cond.select(Bits(5)(step.push["active_idx"]), active_idx)
+                push_pc = cond.select(Bits(32)(step.push["pc"]), push_pc)
 
             if step.pop:
                 pop_en = cond.select(Bits(1)(1), pop_en)
@@ -82,6 +84,7 @@ class Driver(Module):
             imm=push_imm,
             rs1_needed=push_rs1_needed,
             rs2_needed=push_rs2_needed,
+            PC=push_pc,
         )
 
         self.queue.build(push_en, push_entry, pop_en, active_idx)
@@ -108,7 +111,7 @@ class Driver(Module):
 
         for i in range(self.depth):
             entry = self.queue.queue._dtype.view(self.queue.queue[i])
-            log_str += f"E{i}:{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}}; "
+            log_str += f"E{i}:{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}}; "
             args.extend(
                 [
                     entry.valid,
@@ -119,6 +122,7 @@ class Driver(Module):
                     entry.rd_physical,
                     entry.alu_op,
                     entry.imm,
+                    entry.PC,
                 ]
             )
 
@@ -136,7 +140,7 @@ def parse_line(line: str) -> Optional[Dict[str, Any]]:
 
     entry_block = base_match.group(12)
     entries: Dict[int, Dict[str, int]] = {}
-    for match in re.finditer(r"E(\d+):([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+);", entry_block):
+    for match in re.finditer(r"E(\d+):([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+);", entry_block):
         idx = int(match.group(1))
         entries[idx] = {
             "valid": int(match.group(2)),
@@ -147,6 +151,7 @@ def parse_line(line: str) -> Optional[Dict[str, Any]]:
             "rd": int(match.group(7)),
             "op": int(match.group(8)),
             "imm": int(match.group(9)),
+            "pc": int(match.group(10)),
         }
 
     return {
@@ -176,7 +181,7 @@ def check(raw: str):
     step_map = {step.cycle: step for step in STEPS}
 
     queue_storage: List[Dict[str, int]] = [
-        {"valid": 0, "active_idx": 0, "alu_idx": 0, "rs1": 0, "rs2": 0, "rd": 0, "op": 0, "imm": 0}
+        {"valid": 0, "active_idx": 0, "alu_idx": 0, "rs1": 0, "rs2": 0, "rd": 0, "op": 0, "imm": 0, "pc": 0}
         for _ in range(DEPTH)
     ]
     head = 0
@@ -227,6 +232,7 @@ def check(raw: str):
                 "rd": push["rd"],
                 "op": push["alu_op"],
                 "imm": push["imm"],
+                "pc": push["pc"],
             }
             queue_storage[tail] = entry
             tail = (tail + 1) % DEPTH

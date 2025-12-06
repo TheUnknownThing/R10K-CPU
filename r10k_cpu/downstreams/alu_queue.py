@@ -5,6 +5,7 @@ from r10k_cpu.common import alu_queue_entry_type
 
 @dataclass(frozen=True)
 class ALUQueuePushEntry:
+    PC: Value
     rs1_physical: Value
     rs2_physical: Value
     rd_physical: Value
@@ -34,6 +35,7 @@ class ALUQueue(Downstream):
             imm=push_data.imm.optional(Bits(32)(0)),
             rs1_needed=push_data.rs1_needed.optional(Bits(1)(1)),
             rs2_needed=push_data.rs2_needed.optional(Bits(1)(1)),
+            PC=push_data.PC.optional(Bits(32)(0)),
         )
         push_valid = push_enable.optional(Bits(1)(0))
         pop_enable = pop_enable.optional(Bits(1)(0))
