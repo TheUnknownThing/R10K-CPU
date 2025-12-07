@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from assassyn.frontend import *
 from dataclass.circular_queue import CircularQueue, CircularQueueSelection
 from r10k_cpu.common import ALUQueueEntryType, OperantFrom, OPERANT_FROM_LEN
+from r10k_cpu.utils import replace_bundle
 
 @dataclass(frozen=True)
 class ALUQueuePushEntry:
@@ -40,6 +41,7 @@ class ALUQueue(Downstream):
             PC=push_data.PC.optional(Bits(32)(0)),
             is_branch=push_data.is_branch.optional(Bits(1)(0)),
             branch_flip=push_data.branch_flip.optional(Bits(1)(0)),
+            issued=Bits(1)(0),
         )
         push_valid = push_enable.optional(Bits(1)(0))
         pop_enable = pop_enable.optional(Bits(1)(0))
@@ -57,9 +59,18 @@ class ALUQueue(Downstream):
 
             rs1_ready = self._operand_ready(register_ready, entry.rs1_physical, rs1_needed)
             rs2_ready = self._operand_ready(register_ready, entry.rs2_physical, rs2_needed)
-            return entry.valid & rs1_ready & rs2_ready
+            return entry.valid & rs1_ready & rs2_ready & ~entry.issued
 
         return self.queue.choose(selector)
+    
+    def mark_issued(self, index: Value):
+        bundle = self.queue[index]
+        new_bundle = replace_bundle(
+            bundle,
+            issued=Bits(1)(1),
+        )
+        self.queue[index] = new_bundle
+
 
     @staticmethod
     def _operand_ready(register_ready: Array, physical: Value, needed: Value) -> Value:

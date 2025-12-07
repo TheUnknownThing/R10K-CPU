@@ -87,4 +87,5 @@ ALUQueueEntryType = Record(
     PC=Bits(32),
     is_branch=Bits(1),
     branch_flip=Bits(1),
+    issued=Bits(1),
 )

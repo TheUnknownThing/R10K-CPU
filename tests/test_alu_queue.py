@@ -15,6 +15,8 @@ class Step:
     cycle: int
     push: Optional[Dict[str, int]] = None
     pop: bool = False
+    reg_ready: Optional[List[int]] = None
+    issue_idx: Optional[int] = None
 
 
 DEPTH = 4
@@ -28,6 +30,14 @@ STEPS = [
     Step(7, pop=True),
     Step(8, push={"rs1": 10, "rs2": 11, "rd": 14, "alu_op": 5, "imm": 0x50, "active_idx": 7, "pc": 0x1010}),
     Step(9, pop=True),
+    # New steps for issue logic
+    # Queue is empty here. Head=1, Tail=1.
+    Step(10, push={"rs1": 1, "rs2": 2, "rd": 20, "alu_op": 1, "imm": 0, "active_idx": 10, "pc": 0x2000, "op1_from": 0, "op2_from": 0}), # Inst A at 1
+    Step(11, push={"rs1": 3, "rs2": 4, "rd": 21, "alu_op": 1, "imm": 0, "active_idx": 11, "pc": 0x2004, "op1_from": 0, "op2_from": 0}), # Inst B at 2
+    Step(12, reg_ready=[1, 2]), # Make A ready. Expect select A (idx 1).
+    Step(13, reg_ready=[1, 2], issue_idx=1), # Issue A.
+    Step(14, reg_ready=[1, 2]), # A issued. B not ready. Expect select None.
+    Step(15, reg_ready=[1, 2, 3, 4]), # Make B ready. Expect select B (idx 2).
 ]
 
 
@@ -95,10 +105,46 @@ class Driver(Module):
 
         self.queue.build(push_en, push_entry, pop_en, active_idx)
 
+        # Issue logic
+        issue_idx_val = Bits(self.queue.queue.addr_bits)(0)
+        issue_en = Bits(1)(0)
+        ready_indices_map = {}
+
+        for step in STEPS:
+            cond = cycle_val == UInt(32)(step.cycle)
+            if step.issue_idx is not None:
+                issue_en = cond.select(Bits(1)(1), issue_en)
+                issue_idx_val = cond.select(Bits(self.queue.queue.addr_bits)(step.issue_idx), issue_idx_val)
+            if step.reg_ready is not None:
+                ready_indices_map[step.cycle] = step.reg_ready
+
+        with Condition(issue_en):
+            self.queue.mark_issued(issue_idx_val)
+
+        class MockRegisterReady:
+            def __init__(self, ready_indices_map, cycle_val):
+                self.ready_indices_map = ready_indices_map
+                self.cycle_val = cycle_val
+
+            def __getitem__(self, index):
+                is_ready = Bits(1)(0)
+                for cycle, indices in self.ready_indices_map.items():
+                    cond = self.cycle_val == UInt(32)(cycle)
+                    cycle_ready = Bits(1)(0)
+                    if indices:
+                        for idx in indices:
+                            cycle_ready = cycle_ready | (index == Bits(6)(idx))
+                    is_ready = cond.select(cycle_ready, is_ready)
+                return is_ready
+
+        mock_ready = MockRegisterReady(ready_indices_map, cycle_val)
+        selection = self.queue.select_first_ready(mock_ready)
+
         front_entry = self.queue.queue._dtype.view(self.queue.queue.front())
         log_str = (
             "cycle: {}, head: {}, tail: {}, count: {}, push_en: {}, pop_en: {}, "
-            "active_idx: {}, valid: {}, front_valid: {}, front_alu_idx: {}, front_rd: {}, contents: "
+            "active_idx: {}, valid: {}, front_valid: {}, front_alu_idx: {}, front_rd: {}, "
+            "sel_valid: {}, sel_idx: {}, contents: "
         )
 
         args = [
@@ -113,11 +159,13 @@ class Driver(Module):
             front_entry.valid,
             front_entry.alu_queue_idx,
             front_entry.rd_physical,
+            selection.valid,
+            selection.index,
         ]
 
         for i in range(self.depth):
             entry = self.queue.queue._dtype.view(self.queue.queue[i])
-            log_str += f"E{i}:{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}}; "
+            log_str += f"E{i}:{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}}; "
             args.extend(
                 [
                     entry.valid,
@@ -133,6 +181,7 @@ class Driver(Module):
                     entry.is_branch,
                     entry.branch_flip,
                     entry.PC,
+                    entry.issued,
                 ]
             )
 
@@ -142,15 +191,16 @@ class Driver(Module):
 def parse_line(line: str) -> Optional[Dict[str, Any]]:
     base_match = re.search(
         r"cycle: (\d+), head: (\d+), tail: (\d+), count: (\d+), push_en: (\d+), pop_en: (\d+), "
-        r"active_idx: (\d+), valid: (\d+), front_valid: (\d+), front_alu_idx: (\d+), front_rd: (\d+), contents: (.*)",
+        r"active_idx: (\d+), valid: (\d+), front_valid: (\d+), front_alu_idx: (\d+), front_rd: (\d+), "
+        r"sel_valid: (\d+), sel_idx: (\d+), contents: (.*)",
         line,
     )
     if not base_match:
         return None
 
-    entry_block = base_match.group(12)
+    entry_block = base_match.group(14)
     entries: Dict[int, Dict[str, int]] = {}
-    for match in re.finditer(r"E(\d+):([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+);", entry_block):
+    for match in re.finditer(r"E(\d+):([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+);", entry_block):
         idx = int(match.group(1))
         entries[idx] = {
             "valid": int(match.group(2)),
@@ -166,6 +216,7 @@ def parse_line(line: str) -> Optional[Dict[str, Any]]:
             "is_branch": int(match.group(12)),
             "branch_flip": int(match.group(13)),
             "pc": int(match.group(14)),
+            "issued": int(match.group(15)),
         }
 
     return {
@@ -180,11 +231,14 @@ def parse_line(line: str) -> Optional[Dict[str, Any]]:
         "front_valid": int(base_match.group(9)),
         "front_alu_idx": int(base_match.group(10)),
         "front_rd": int(base_match.group(11)),
+        "sel_valid": int(base_match.group(12)),
+        "sel_idx": int(base_match.group(13)),
         "entries": entries,
     }
 
 
 def check(raw: str):
+    print(raw)
     lines = raw.strip().split("\n")
     history: Dict[int, Dict[str, Any]] = {}
     for line in lines:
@@ -209,6 +263,7 @@ def check(raw: str):
             "is_branch": 0,
             "branch_flip": 0,
             "pc": 0,
+            "issued": 0,
         }
         for _ in range(DEPTH)
     ]
@@ -243,42 +298,66 @@ def check(raw: str):
                 ), f"Cycle {cycle}, slot {i}, field {field}: expected {stored[field]}, got {logged[field if field != 'alu_idx' else 'alu_idx']}"
 
         step = step_map.get(cycle)
+        
+        # Check selection
+        expected_sel_valid = 0
+        expected_sel_idx = 0
+        
+        if step and step.reg_ready is not None:
+            ready_regs = set(step.reg_ready)
+            for i in range(count):
+                idx = (head + i) % DEPTH
+                entry = queue_storage[idx]
+                
+                if entry["issued"]:
+                    continue
+                
+                rs1_needed = (entry["op1_from"] == 0) or (entry["op2_from"] == 0)
+                rs2_needed = (entry["op1_from"] == 1) or (entry["op2_from"] == 1)
+                
+                rs1_ok = (not rs1_needed) or (entry["rs1"] in ready_regs)
+                rs2_ok = (not rs2_needed) or (entry["rs2"] in ready_regs)
+                
+                if rs1_ok and rs2_ok:
+                    expected_sel_valid = 1
+                    expected_sel_idx = idx
+                    break
+        
+        assert log_entry["sel_valid"] == expected_sel_valid, f"Cycle {cycle}: expected sel_valid {expected_sel_valid}, got {log_entry['sel_valid']}"
+        if expected_sel_valid:
+            assert log_entry["sel_idx"] == expected_sel_idx, f"Cycle {cycle}: expected sel_idx {expected_sel_idx}, got {log_entry['sel_idx']}"
+
         if step:
-            push = step.push
-            pop = step.pop
-        else:
-            push = None
-            pop = False
+            if step.push:
+                queue_storage[tail] = {
+                    "valid": 1,
+                    "active_idx": step.push["active_idx"],
+                    "alu_idx": tail + 1, # alu_idx is 1-based? In build: (tail + 1)
+                    "rs1": step.push["rs1"],
+                    "rs2": step.push["rs2"],
+                    "rd": step.push["rd"],
+                    "op": step.push["alu_op"],
+                    "imm": step.push["imm"],
+                    "op1_from": step.push.get("op1_from", 0),
+                    "op2_from": step.push.get("op2_from", 1),
+                    "is_branch": step.push.get("is_branch", 0),
+                    "branch_flip": step.push.get("branch_flip", 0),
+                    "pc": step.push["pc"],
+                    "issued": 0,
+                }
+                tail = (tail + 1) % DEPTH
+                count += 1
 
-        if push:
-            entry = {
-                "valid": 1,
-                "active_idx": push["active_idx"],
-                "alu_idx": (tail + 1) % 32,
-                "rs1": push["rs1"],
-                "rs2": push["rs2"],
-                "rd": push["rd"],
-                "op": push["alu_op"],
-                "imm": push["imm"],
-                "op1_from": push.get("op1_from", 0),
-                "op2_from": push.get("op2_from", 1),
-                "is_branch": push.get("is_branch", 0),
-                "branch_flip": push.get("branch_flip", 0),
-                "pc": push["pc"],
-            }
-            queue_storage[tail] = entry
-            tail = (tail + 1) % DEPTH
-
-        if pop and count > 0:
-            head = (head + 1) % DEPTH
-
-        if push and not pop:
-            count += 1
-        elif pop and not push and count > 0:
-            count -= 1
+            if step.pop:
+                # queue_storage[head]["valid"] = 0
+                head = (head + 1) % DEPTH
+                count -= 1
+            
+            if step.issue_idx is not None:
+                queue_storage[step.issue_idx]["issued"] = 1
 
     # Final sanity: queue should be empty after final pop
-    assert count == 0, "Queue should be empty after final operations"
+    # assert count == 0, "Queue should be empty after final operations" # Count might not be 0 in my new test case
 
 
 def test_alu_queue_behavior():
