@@ -3,6 +3,7 @@ from typing import Optional
 from assassyn.frontend import *
 from dataclass.circular_queue import CircularQueue
 from r10k_cpu.common import ROBEntryType
+from r10k_cpu.utils import replace_bundle
 
 
 @dataclass(frozen=True)
@@ -60,23 +61,12 @@ class ActiveList(Downstream):
 
     def set_ready(self, index: Value, actual_branch: Optional[Value] = None) -> None:
         bundle = self.queue[index]
-        new_bundle = ROBEntryType.bundle(
-            pc=bundle.pc,
-            dest_logical=bundle.dest_logical,
-            dest_new_physical=bundle.dest_new_physical,
-            dest_old_physical=bundle.dest_old_physical,
-            has_dest=bundle.has_dest,
-            imm=bundle.imm,
+        new_bundle = replace_bundle(
+            bundle,
             ready=Bits(1)(1),
-            is_branch=bundle.is_branch,
-            is_alu=bundle.is_alu,
-            predict_branch=bundle.predict_branch,
             actual_branch=(
                 actual_branch if actual_branch is not None else bundle.actual_branch
             ),
-            is_jump=bundle.is_jump,
-            is_jalr=bundle.is_jalr,
-            is_terminator=bundle.is_terminator,
         )
         self.queue[index] = new_bundle
 
