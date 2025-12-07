@@ -38,7 +38,7 @@ def build_cpu(
                 continue
             words.append(int(raw, 16))
 
-    data_word_depth = max(1, (len(words) + 3) // 4).bit_length()
+    data_word_depth = max(1, (len(words) + 3) // 4)
 
     sys = SysBuilder("MIPS_R10K_OoO")
 
