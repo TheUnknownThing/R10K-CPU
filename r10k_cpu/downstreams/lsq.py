@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from assassyn.frontend import *
 from dataclass.circular_queue import CircularQueue, CircularQueueSelection
 from r10k_cpu.common import LSQEntryType
-from r10k_cpu.utils import replace_bundle
+from r10k_cpu.utils import is_between, replace_bundle
 
 @dataclass(frozen=True)
 class LSQPushEntry:
@@ -70,3 +70,13 @@ class LSQ(Downstream):
 
     def valid(self) -> Value:
         return ~self.queue.is_empty()
+        
+    def is_store_before(self, index: Value) -> Value:
+        before = Bits(1)(0)
+        is_head = self.queue._head[0] == index
+
+        for i in range(self.queue.depth):
+            is_valid = is_between(UInt(self.queue.addr_bits)(i), self.queue._head[0], index)
+            before |= is_valid & self.queue[i].is_store
+
+        return before & ~is_head

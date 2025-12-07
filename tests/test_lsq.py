@@ -17,6 +17,7 @@ class Step:
     pop: bool = False
     reg_ready: Optional[List[int]] = None
     issue_idx: Optional[int] = None
+    check_idx: Optional[int] = None
 
 
 DEPTH = 4
@@ -49,6 +50,41 @@ STEPS = [
     Step(13, reg_ready=[11], issue_idx=1), # Issue A.
     Step(14, reg_ready=[11]), # A issued. B not ready. Expect select None.
     Step(15, reg_ready=[11, 12, 13]), # Make B ready. Expect select B (idx 2).
+
+    # New tests for is_store_before
+    # Current state: Head=1, Tail=3. Queue: [?, Load(1), Store(2), ?].
+    # Valid indices: 1, 2.
+    
+    # Case 1: Check Head (1). Range empty. Expect 0.
+    Step(16, check_idx=1),
+    
+    # Case 2: Check Store (2). Range [1, 2) -> {1}. 1 is Load. Expect 0.
+    Step(17, check_idx=2),
+    
+    # Case 3: Check Next (3). Range [1, 3) -> {1, 2}. 2 is Store. Expect 1.
+    Step(18, check_idx=3),
+    
+    # Add more items to wrap.
+    # Push Load at 3. Tail -> 0.
+    Step(19, push={"is_load": 1, "is_store": 0, "op_type": 0, "imm": 0}),
+    # Push Store at 0. Tail -> 1.
+    Step(20, push={"is_load": 0, "is_store": 1, "op_type": 0, "imm": 0}),
+    
+    # State: Head=1, Tail=1 (Full? or Empty? Count=4).
+    # Queue: 0:Store, 1:Load, 2:Store, 3:Load.
+    # Order: 1, 2, 3, 0.
+    
+    # Case 4: Check index 3. Range [1, 3) -> {1, 2}. 2 is Store. Expect 1.
+    Step(21, check_idx=3),
+    
+    # Case 5: Check index 0. Range [1, 0) (wrap) -> {1, 2, 3}. 2 is Store. Expect 1.
+    Step(22, check_idx=0),
+    
+    # Case 6: Check index 1 (Head). Range [1, 1) -> Empty. Expect 0.
+    Step(23, check_idx=1),
+    
+    # Case 7: Check index 2. Range [1, 2) -> {1}. 1 is Load. Expect 0.
+    Step(24, check_idx=2),
 ]
 
 
@@ -111,6 +147,7 @@ class Driver(Module):
         issue_idx_val = Bits(self.queue.queue.addr_bits)(0)
         issue_en = Bits(1)(0)
         ready_indices_map = {}
+        check_idx_val = Bits(self.queue.queue.addr_bits)(0)
 
         for step in STEPS:
             cond = cycle_val == UInt(32)(step.cycle)
@@ -119,9 +156,13 @@ class Driver(Module):
                 issue_idx_val = cond.select(Bits(self.queue.queue.addr_bits)(step.issue_idx), issue_idx_val)
             if step.reg_ready is not None:
                 ready_indices_map[step.cycle] = step.reg_ready
+            if step.check_idx is not None:
+                check_idx_val = cond.select(Bits(self.queue.queue.addr_bits)(step.check_idx), check_idx_val)
 
         with Condition(issue_en):
             self.queue.mark_issued(issue_idx_val)
+
+        is_store_before_res = self.queue.is_store_before(check_idx_val)
 
         class MockRegisterReady:
             def __init__(self, ready_indices_map, cycle_val):
@@ -146,7 +187,8 @@ class Driver(Module):
 
         log_str = (
             "cycle: {}, head: {}, tail: {}, count: {}, push_en: {}, pop_en: {}, "
-            "front_valid: {}, front_queue_idx: {}, sel_valid: {}, sel_idx: {}, contents: "
+            "front_valid: {}, front_queue_idx: {}, sel_valid: {}, sel_idx: {}, "
+            "check_idx: {}, is_store_before: {}, contents: "
         )
 
         args = [
@@ -160,6 +202,8 @@ class Driver(Module):
             front_entry.lsq_queue_idx,
             selection.valid,
             selection.index,
+            check_idx_val,
+            is_store_before_res,
         ]
 
         for i in range(self.depth):
@@ -183,13 +227,14 @@ class Driver(Module):
 def parse_line(line: str) -> Optional[Dict[str, Any]]:
     base_match = re.search(
         r"cycle: (\d+), head: (\d+), tail: (\d+), count: (\d+), push_en: (\d+), pop_en: (\d+), "
-        r"front_valid: (\d+), front_queue_idx: (\d+), sel_valid: (\d+), sel_idx: (\d+), contents: (.*)",
+        r"front_valid: (\d+), front_queue_idx: (\d+), sel_valid: (\d+), sel_idx: (\d+), "
+        r"check_idx: (\d+), is_store_before: (\d+), contents: (.*)",
         line,
     )
     if not base_match:
         return None
 
-    entry_block = base_match.group(11)
+    entry_block = base_match.group(13)
     entries: Dict[int, Dict[str, int]] = {}
     for match in re.finditer(r"E(\d+):([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+);", entry_block):
         idx = int(match.group(1))
@@ -214,6 +259,8 @@ def parse_line(line: str) -> Optional[Dict[str, Any]]:
         "front_queue_idx": int(base_match.group(8)),
         "sel_valid": int(base_match.group(9)),
         "sel_idx": int(base_match.group(10)),
+        "check_idx": int(base_match.group(11)),
+        "is_store_before": int(base_match.group(12)),
         "entries": entries,
     }
 
@@ -297,6 +344,26 @@ def check(raw: str):
         assert log_entry["sel_valid"] == expected_sel_valid, f"Cycle {cycle}: expected sel_valid {expected_sel_valid}, got {log_entry['sel_valid']}"
         if expected_sel_valid:
             assert log_entry["sel_idx"] == expected_sel_idx, f"Cycle {cycle}: expected sel_idx {expected_sel_idx}, got {log_entry['sel_idx']}"
+
+        # Check is_store_before
+        if step and step.check_idx is not None:
+            chk = step.check_idx
+            expected_store_before = 0
+            
+            for i in range(DEPTH):
+                # Check if i is between head and chk
+                is_bet = False
+                if head <= chk:
+                    is_bet = head <= i < chk
+                else:
+                    is_bet = (head <= i) or (i < chk)
+                
+                if is_bet and queue_storage[i]["is_store"]:
+                    expected_store_before = 1
+                    break
+            
+            assert log_entry["is_store_before"] == expected_store_before, \
+                f"Cycle {cycle}: expected is_store_before({chk})={expected_store_before}, got {log_entry['is_store_before']}"
 
         push = step.push if step else None
         pop = step.pop if step else False
