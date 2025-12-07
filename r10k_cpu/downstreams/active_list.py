@@ -21,6 +21,7 @@ class InstructionPushEntry:
     is_jump: Value
     is_jalr: Value
     is_terminator: Value
+    is_naturally_ready: Value
 
 
 class ActiveList(Downstream):
@@ -44,7 +45,7 @@ class ActiveList(Downstream):
             dest_old_physical=push_inst.dest_old_physical.optional(Bits(6)(0)),
             has_dest=push_inst.has_dest.optional(Bits(1)(0)),
             imm=push_inst.imm.optional(Bits(32)(0)),
-            ready=Bits(1)(0),
+            ready=push_inst.is_naturally_ready.optional(Bits(1)(0)),
             is_branch=push_inst.is_branch.optional(Bits(1)(0)),
             is_alu=push_inst.is_alu.optional(Bits(1)(0)),
             predict_branch=push_inst.predict_branch.optional(Bits(1)(0)),

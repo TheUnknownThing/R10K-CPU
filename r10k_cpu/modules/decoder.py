@@ -60,6 +60,7 @@ class Decoder(Module):
             is_jump=args.is_jump,
             is_jalr=args.is_jalr,
             is_terminator=args.is_terminator,
+            is_naturally_ready=args.is_store | args.is_terminator,
         )
 
         alu_push_enable = args.is_alu

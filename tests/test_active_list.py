@@ -137,6 +137,7 @@ class Driver(Module):
         push_is_jump = Bits(1)(0)
         push_is_jalr = Bits(1)(0)
         push_is_terminator = Bits(1)(0)
+        push_is_naturally_ready = Bits(1)(0)
 
         pop_enable = Bits(1)(0)
 
@@ -163,6 +164,7 @@ class Driver(Module):
                 push_is_jump = cond.select(Bits(1)(step.push.get("is_jump", 0)), push_is_jump)
                 push_is_jalr = cond.select(Bits(1)(step.push.get("is_jalr", 0)), push_is_jalr)
                 push_is_terminator = cond.select(Bits(1)(step.push.get("is_terminator", 0)), push_is_terminator)
+                push_is_naturally_ready = cond.select(Bits(1)(step.push.get("is_naturally_ready", 0)), push_is_naturally_ready)
 
             if step.retire:
                 pop_enable = cond.select(Bits(1)(1), pop_enable)
@@ -188,6 +190,7 @@ class Driver(Module):
             is_jump=push_is_jump,
             is_jalr=push_is_jalr,
             is_terminator=push_is_terminator,
+            is_naturally_ready=push_is_naturally_ready,
         )
 
         self.active_list.build(push_inst, pop_enable)
