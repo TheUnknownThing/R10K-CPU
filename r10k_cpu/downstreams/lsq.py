@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from assassyn.frontend import *
 from dataclass.circular_queue import CircularQueue, CircularQueueSelection
 from r10k_cpu.common import LSQEntryType
+from r10k_cpu.utils import replace_bundle
 
 @dataclass(frozen=True)
 class LSQPushEntry:
@@ -33,6 +34,7 @@ class LSQ(Downstream):
             rd_physical=push_data.rd_physical.optional(Bits(6)(0)),
             rs1_physical=push_data.rs1_physical.optional(Bits(6)(0)),
             rs2_physical=push_data.rs2_physical.optional(Bits(6)(0)),
+            issued=Bits(1)(0),
         )
         push_valid = push_enable.optional(Bits(1)(0))
         pop_enable = pop_enable.optional(Bits(1)(0))
@@ -49,9 +51,17 @@ class LSQ(Downstream):
             # rs2 is needed for store data
             rs2_needed = entry.is_store
             
-            return entry.valid & rs1_ready & ((~rs2_needed) | rs2_ready)
+            return entry.valid & rs1_ready & ((~rs2_needed) | rs2_ready) & ~entry.issued
 
         return self.queue.choose(selector)
+    
+    def mark_issued(self, index: Value):
+        bundle = self.queue[index]
+        new_bundle = replace_bundle(
+            bundle,
+            issued=Bits(1)(1),
+        )
+        self.queue[index] = new_bundle
 
     @staticmethod
     def _operand_ready(register_ready: Array, physical: Value) -> Value:

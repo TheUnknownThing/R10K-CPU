@@ -43,6 +43,7 @@ LSQEntryType = Record(
     is_load=Bits(1),
     is_store=Bits(1),
     op_type=Bits(MEMORY_OP_TYPE_LEN),
+    issued=Bits(1),
 )
 
 
