@@ -24,7 +24,7 @@ class ALU(Module):
         self.name = "ALU"
 
     @module.combinational
-    def build(self, instr: Value, physical_register_file: Array, register_ready: Array, active_list: ActiveList):
+    def build(self, physical_register_file: Array, register_ready: Array, active_list: ActiveList):
         instr = self.pop_all_ports(False)
 
         op_a = self._select_operand(instr, instr.operant1_from, physical_register_file)

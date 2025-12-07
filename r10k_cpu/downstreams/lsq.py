@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from assassyn.frontend import *
 from dataclass.circular_queue import CircularQueue, CircularQueueSelection
 from r10k_cpu.common import LSQEntryType
-from r10k_cpu.config import data_depth
 
 @dataclass(frozen=True)
 class LSQPushEntry:

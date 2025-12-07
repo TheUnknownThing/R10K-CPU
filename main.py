@@ -1,6 +1,7 @@
 from assassyn.frontend import *
 from assassyn.backend import *
 from assassyn import utils
+from typing import List
 
 from r10k_cpu.downstreams.free_list import FreeList
 from r10k_cpu.downstreams.active_list import ActiveList
@@ -9,6 +10,9 @@ from r10k_cpu.downstreams.lsq import LSQ
 from r10k_cpu.downstreams.map_table import MapTable, MapTableWriteEntry
 from r10k_cpu.modules.commit import Commit
 from r10k_cpu.modules.driver import Driver
+from r10k_cpu.modules.lsu import LSU
+from r10k_cpu.modules.alu import ALU
+from r10k_cpu.modules.writeback import WriteBack
 
 DEFAULT_WORKSPACE = Path(__file__).with_name(".workspace")
 
@@ -25,6 +29,17 @@ def build_cpu(
     workspace_path = Path(workspace) if workspace is not None else DEFAULT_WORKSPACE
     workspace_path.mkdir(parents=True, exist_ok=True)
 
+    data_image_file = workspace_path / "data.hex"
+    words: List[int] = []
+    with open(data_image_file, "r", encoding="utf-8") as src:
+        for raw in src:
+            raw = raw.split("//")[0].strip()
+            if not raw:
+                continue
+            words.append(int(raw, 16))
+
+    data_word_depth = max(1, (len(words) + 3) // 4).bit_length()
+
     sys = SysBuilder("MIPS_R10K_OoO")
 
     with sys:
@@ -32,6 +47,9 @@ def build_cpu(
         commit = Commit()
         free_list = FreeList(register_number=2**6)  # 64 physical registers
         active_list = ActiveList(depth=2**5)  # Active List depth = 32
+        alu = ALU()
+        lsu = LSU()
+        writeback = WriteBack()
         alu_queue = ALUQueue(depth=2**5)  # ALU Queue depth = 32
         lsq = LSQ(depth=2**5)  # LSQ depth = 32
         map_table = MapTable(num_logical=32, physical_bits=6)
@@ -40,6 +58,9 @@ def build_cpu(
         # NOTE: register_ready indicates whether a physical register contains valid data.
         # It is maintained by Writeback stage (sets to 1) and Commit stage (sets to 0).
         register_ready = RegArray(Bits(1), 64, initializer=[1] * 64)  # All registers are free at start
+
+        dcache = SRAM(width=32, depth=data_word_depth, init_file=str(data_image_file))
+        dcache.name = "memory_data"
 
         driver.build(commit=commit)
 
@@ -55,6 +76,25 @@ def build_cpu(
         ) = commit.build(
             active_list_queue=active_list.queue,
             register_ready=register_ready,
+        )
+
+        alu.build(
+            physical_register_file=physical_register_file,
+            register_ready=register_ready,
+            active_list=active_list,
+        )
+
+        lsu.build(
+            physical_register_file=physical_register_file,
+            memory=dcache,
+            wb=writeback,
+        )
+
+        writeback.build(
+            active_list=active_list,
+            register_ready=register_ready,
+            physical_register_file=physical_register_file,
+            memory=dcache,
         )
 
         rename_write = map_table.idle_port() # TODO: rename_write needs to be set to ID's return signal
