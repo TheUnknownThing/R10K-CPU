@@ -49,7 +49,7 @@ class ALUQueue(Downstream):
         self.queue.operate(push_enable=push_valid, push_data=entry, pop_enable=pop_enable)
 
     def select_first_ready(self, register_ready: Array) -> CircularQueueSelection:
-        def selector(value: Value) -> Value:
+        def selector(value: Value, _) -> Value:
             entry = ALUQueueEntryType.view(value)
             
             rs1_needed = (entry.operant1_from == Bits(OPERANT_FROM_LEN)(OperantFrom.RS1.value)) | \

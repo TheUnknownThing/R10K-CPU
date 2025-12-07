@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from assassyn.frontend import *
+from assassyn.ir.array import ArrayRead
 from dataclass.circular_queue import CircularQueue, CircularQueueSelection
 from r10k_cpu.common import LSQEntryType
 from r10k_cpu.utils import is_between, replace_bundle
@@ -42,7 +43,7 @@ class LSQ(Downstream):
         self.queue.operate(push_enable=push_valid, push_data=entry, pop_enable=pop_enable)
 
     def select_first_ready(self, register_ready: Array) -> CircularQueueSelection:
-        def selector(value: Value) -> Value:
+        def selector(value: ArrayRead, index: Value) -> Value:
             entry = LSQEntryType.view(value)
             rs1_ready = self._operand_ready(register_ready, entry.rs1_physical)
             rs2_ready = self._operand_ready(register_ready, entry.rs2_physical)
@@ -50,8 +51,11 @@ class LSQ(Downstream):
             # rs1 is always needed for address
             # rs2 is needed for store data
             rs2_needed = entry.is_store
+
+            store_before = self.is_store_before(index)
+            is_store = value.is_store
             
-            return entry.valid & rs1_ready & ((~rs2_needed) | rs2_ready) & ~entry.issued
+            return entry.valid & rs1_ready & ((~rs2_needed) | rs2_ready) & ~entry.issued & (~store_before | is_store)
 
         return self.queue.choose(selector)
     

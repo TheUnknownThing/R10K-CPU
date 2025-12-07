@@ -96,7 +96,7 @@ class Driver(Module):
                 search_target = cond.select(UInt(10)(step.search), search_target)
 
         pop_data = self.queue.operate(push_enable=push_enable, push_data=push_data, pop_enable=pop_enable)
-        selection = self.queue.choose(lambda x: x == search_target)
+        selection = self.queue.choose(lambda x, _: x == search_target)
 
         log_strings = (
             "cycle: {}, head: {}, tail: {}, count: {}, is_full: {}, is_empty:{}, front: {}, pop_data: {}, "

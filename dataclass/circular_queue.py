@@ -113,8 +113,9 @@ class CircularQueue:
 
         return pop_data
 
-    def choose(self, selector: Callable[[ArrayRead], Value]) -> CircularQueueSelection:
+    def choose(self, selector: Callable[[ArrayRead, Value], Value]) -> CircularQueueSelection:
         """Choose the first element in the queue matching the given selector."""
+        """Selector function takes (value, index) and returns Bool."""
 
         selected_data = self._storage[0]
         selected_index = self._zero_addr
@@ -129,7 +130,7 @@ class CircularQueue:
             offset_uint = UInt(self.count_bits)(offset)
             has_entry = offset_uint < count_uint
             value = self._storage[pointer]
-            matches = selector(value).bitcast(Bits(1))
+            matches = selector(value, pointer).bitcast(Bits(1))
             candidate_valid = has_entry & matches
             new_hit = candidate_valid & ~selected_valid
 

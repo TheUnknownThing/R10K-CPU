@@ -100,7 +100,7 @@ class Driver(Module):
         pop_data = self.queue.operate(
             push_enable=push_enable, push_data=record.bundle(a=push_data, b=UInt(10)(0)), pop_enable=pop_enable
         )
-        selection = self.queue.choose(lambda x: x.a == search_target)
+        selection = self.queue.choose(lambda x, _: x.a == search_target)
 
         log_strings = (
             "cycle: {}, head: {}, tail: {}, count: {}, is_full: {}, is_empty:{}, front: {}, pop_data: {}, "
