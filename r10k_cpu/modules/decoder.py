@@ -33,11 +33,15 @@ class Decoder(Module):
         rs2 = instruction[20:24]
         args = select_instruction_args(instruction)
 
-        is_zero_register = rd == Bits(5)(0)
-        physical_rd = is_zero_register.select(free_list.zero_reg, free_list.free_reg())
+        has_dest = args.has_rd
+        logical_rd = has_dest.select(rd, Bits(5)(0))
+        is_zero_register = logical_rd == Bits(5)(0)
+        dest_valid = has_dest & ~is_zero_register
+
+        old_physical_rd = dest_valid.select(map_table.read_spec(logical_rd), Bits(6)(0))
+        physical_rd = dest_valid.select(free_list.free_reg(), free_list.zero_reg)
         physical_rs1 = map_table.read_spec(rs1)
         physical_rs2 = map_table.read_spec(rs2)
-        old_physical_rd = map_table.read_spec(rd)
 
         wait_until(~active_list.is_full())
 
@@ -46,9 +50,10 @@ class Decoder(Module):
             InstructionPushEntry,
             valid=attach_context(Bool(1)),
             pc=PC,
-            dest_logical=rd,
+            dest_logical=logical_rd,
             dest_new_physical=physical_rd,
             dest_old_physical=old_physical_rd,
+            has_dest=dest_valid,
             imm=args.imm,
             is_branch=args.is_branch,
             is_alu=args.is_alu,
@@ -82,11 +87,11 @@ class Decoder(Module):
             op_type=args.mem_op,
         )
 
-        free_list_pop_enable = ~is_zero_register
+        free_list_pop_enable = dest_valid
 
         map_table_entry = MapTableWriteEntry(
-            enable=~is_zero_register,
-            logical_idx=rd,
+            enable=dest_valid,
+            logical_idx=logical_rd,
             physical_value=physical_rd,
         )
 
