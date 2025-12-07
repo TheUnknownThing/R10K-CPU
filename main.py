@@ -31,12 +31,13 @@ def build_cpu(
 
     data_image_file = workspace_path / "data.hex"
     words: List[int] = []
-    with open(data_image_file, "r", encoding="utf-8") as src:
-        for raw in src:
-            raw = raw.split("//")[0].strip()
-            if not raw:
-                continue
-            words.append(int(raw, 16))
+    if data_image_file.exists():
+        with open(data_image_file, "r", encoding="utf-8") as src:
+            for raw in src:
+                raw = raw.split("//")[0].strip()
+                if not raw:
+                    continue
+                words.append(int(raw, 16))
 
     data_word_depth = max(1, (len(words) + 3) // 4)
 

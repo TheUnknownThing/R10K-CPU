@@ -31,4 +31,5 @@ class LSU(Module):
             op_type=instr.op_type,
             dest_physical=instr.rd_physical,
             active_list_idx=instr.active_list_idx,
+            addr=addr,
         )

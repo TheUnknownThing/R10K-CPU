@@ -12,6 +12,7 @@ class WriteBack(Module):
             "op_type": Bits(3),
             "dest_physical": Bits(6),
             "active_list_idx": Bits(5),
+            "addr": Bits(32),
         })
         self.name = "WriteBack"
     
@@ -23,12 +24,13 @@ class WriteBack(Module):
             need_update_active_list,
             op_type, 
             dest_physical, 
-            active_list_idx
+            active_list_idx,
+            addr,
         ) = self.pop_all_ports(False)
 
         with Condition(is_load):
             memory_out = memory.dout[0]
-            physical_register_file[dest_physical] = self.process_memory_data(op_type, memory_out)
+            physical_register_file[dest_physical] = self.process_memory_data(op_type, memory_out, addr)
             register_ready[dest_physical] = Bits(1)(1)
         
         with Condition(need_update_active_list):
@@ -37,9 +39,10 @@ class WriteBack(Module):
         # If we have already committed the store, we do not need to do anything here.
 
     @staticmethod
-    def process_memory_data(op_type: Value, data: Value) -> Value:
+    def process_memory_data(op_type: Value, data: Value, address: Value) -> Value:
         """Process data read from memory based on operation type."""
-        shift_amt = Bits(5)(0)
+        byte_offset = address[0:2].bitcast(UInt(2))
+        shift_amt = (byte_offset << UInt(5)(3)).bitcast(Bits(5))
         data_shifted = (data.bitcast(UInt(32)) >> shift_amt).bitcast(Bits(32))
 
         byte_val = data_shifted[0:8]

@@ -36,7 +36,6 @@ class ALU(Module):
         op_b_int = op_b.bitcast(Int(32))
         shamt = op_b[0:4]
         shamt_u = shamt.bitcast(UInt(5))
-        shamt_i = shamt.bitcast(Int(5))
 
         results= [Bits(32)(0) for _ in range(ALU_OP_COUNT)]
 
@@ -44,7 +43,7 @@ class ALU(Module):
         results[RV32I_ALU_Code.SUB.value] = (op_a_int - op_b_int).bitcast(Bits(32))
         results[RV32I_ALU_Code.SLL.value] = op_a << shamt_u
         results[RV32I_ALU_Code.SRL.value] = op_a >> shamt_u
-        results[RV32I_ALU_Code.SRA.value] = (op_a_int >> shamt_i).bitcast(Bits(32))
+        results[RV32I_ALU_Code.SRA.value] = (op_a_int >> shamt_u).bitcast(Bits(32))
         results[RV32I_ALU_Code.AND.value] = op_a & op_b
         results[RV32I_ALU_Code.OR.value] = op_a | op_b
         results[RV32I_ALU_Code.XOR.value] = op_a ^ op_b
@@ -108,4 +107,3 @@ class ALU(Module):
             cond = selector == Bits(OPERANT_FROM_LEN)(source.value)
             value = cond.select(data, value)
         return value
-
