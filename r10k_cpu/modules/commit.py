@@ -13,22 +13,23 @@ class Commit(Module):
         """Graduate instructions, free physical registers, and surface map-table updates."""
 
         front_entry = active_list_queue.front()
-        with Condition(front_entry.ready):
+        retire_with_dest = front_entry.ready & front_entry.has_dest
+        with Condition(retire_with_dest):
             register_ready[front_entry.dest_old_physical] = Bits(1)(0)
 
         mispredict = front_entry.is_branch & (front_entry.predict_branch != front_entry.actual_branch)
         flush_recover = front_entry.ready & mispredict
 
-        commit_write_enable = front_entry.ready
-        commit_logical = front_entry.dest_logical
-        commit_physical = front_entry.dest_new_physical
+        commit_write_enable = retire_with_dest
+        commit_logical = retire_with_dest.select(front_entry.dest_logical, Bits(5)(0))
+        commit_physical = retire_with_dest.select(front_entry.dest_new_physical, Bits(6)(0))
 
         # front_entry ready indicates whether to pop instruction
         return (
             front_entry.ready,
             front_entry.ready & front_entry.is_alu,
             front_entry.ready & ~front_entry.is_alu,
-            front_entry.dest_old_physical,
+            retire_with_dest.select(front_entry.dest_old_physical, Bits(6)(0)),
             commit_write_enable,
             commit_logical,
             commit_physical,

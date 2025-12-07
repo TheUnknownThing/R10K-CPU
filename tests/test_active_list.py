@@ -129,6 +129,7 @@ class Driver(Module):
         push_dest_logical = Bits(5)(0)
         push_dest_new_physical = Bits(6)(0)
         push_dest_old_physical = Bits(6)(0)
+        push_has_dest = Bits(1)(0)
         push_imm = Bits(32)(0)
         push_is_branch = Bits(1)(0)
         push_is_alu = Bits(1)(1)
@@ -154,6 +155,7 @@ class Driver(Module):
                 push_dest_logical = cond.select(Bits(5)(step.push["dest_logical"]), push_dest_logical)
                 push_dest_new_physical = cond.select(Bits(6)(step.push["dest_new_physical"]), push_dest_new_physical)
                 push_dest_old_physical = cond.select(Bits(6)(step.push["dest_old_physical"]), push_dest_old_physical)
+                push_has_dest = cond.select(Bits(1)(step.push.get("has_dest", 1)), push_has_dest)
                 push_imm = cond.select(Bits(32)(step.push["imm"]), push_imm)
                 push_is_branch = cond.select(Bits(1)(step.push["is_branch"]), push_is_branch)
                 push_is_alu = cond.select(Bits(1)(step.push.get("is_alu", 1)), push_is_alu)
@@ -178,6 +180,7 @@ class Driver(Module):
             dest_logical=push_dest_logical,
             dest_new_physical=push_dest_new_physical,
             dest_old_physical=push_dest_old_physical,
+            has_dest=push_has_dest,
             imm=push_imm,
             is_branch=push_is_branch,
             is_alu=push_is_alu,
@@ -216,7 +219,7 @@ class Driver(Module):
         ]
 
         for i in range(self.depth):
-            log_strings += "({}, {}, {}, {}, {}, {}, {}), "
+            log_strings += "({}, {}, {}, {}, {}, {}, {}, {}), "
             entry = self.active_list.queue[i]
             args.append(entry.pc)
             args.append(entry.ready)
@@ -225,6 +228,7 @@ class Driver(Module):
             args.append(entry.is_jump)
             args.append(entry.is_jalr)
             args.append(entry.is_terminator)
+            args.append(entry.has_dest)
 
         log(log_strings, *args)
 
@@ -256,7 +260,7 @@ def check(raw: str):
             contents_str = line.split("contents: ")[1]
             # (pc, ready, imm, actual_branch, is_jump, is_jalr, is_terminator), ...
             # Use regex to find all pairs
-            pairs = re.findall(r"\((\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+)\)", contents_str)
+            pairs = re.findall(r"\((\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+), (\d+)\)", contents_str)
             base["contents"] = [
                 {
                     "pc": int(p[0]),
@@ -266,6 +270,7 @@ def check(raw: str):
                     "is_jump": int(p[4]),
                     "is_jalr": int(p[5]),
                     "is_terminator": int(p[6]),
+                    "has_dest": int(p[7]),
                 }
                 for p in pairs
             ]
@@ -289,6 +294,7 @@ def check(raw: str):
             "is_jump": 0,
             "is_jalr": 0,
             "is_terminator": 0,
+            "has_dest": 0,
         }
         for _ in range(depth)
     ]
@@ -330,6 +336,7 @@ def check(raw: str):
             expected_is_jump = queue_storage[i]["is_jump"]
             expected_is_jalr = queue_storage[i]["is_jalr"]
             expected_is_terminator = queue_storage[i]["is_terminator"]
+            expected_has_dest = queue_storage[i]["has_dest"]
             got_pc = log_entry["contents"][i]["pc"]
             got_ready = log_entry["contents"][i]["ready"]
             got_imm = log_entry["contents"][i]["imm"]
@@ -337,6 +344,7 @@ def check(raw: str):
             got_is_jump = log_entry["contents"][i]["is_jump"]
             got_is_jalr = log_entry["contents"][i]["is_jalr"]
             got_is_terminator = log_entry["contents"][i]["is_terminator"]
+            got_has_dest = log_entry["contents"][i]["has_dest"]
             assert got_pc == expected_pc, f"Cycle {c}, Index {i}: Expected pc {expected_pc}, got {got_pc}"
             assert (
                 got_ready == expected_ready
@@ -354,6 +362,9 @@ def check(raw: str):
             assert (
                 got_is_terminator == expected_is_terminator
             ), f"Cycle {c}, Index {i}: Expected is_terminator {expected_is_terminator}, got {got_is_terminator}"
+            assert (
+                got_has_dest == expected_has_dest
+            ), f"Cycle {c}, Index {i}: Expected has_dest {expected_has_dest}, got {got_has_dest}"
 
         # 2. Apply operations for NEXT cycle
         step = step_map.get(c)
@@ -384,6 +395,7 @@ def check(raw: str):
             queue_storage[tail]["is_jump"] = push_data.get("is_jump", 0)
             queue_storage[tail]["is_jalr"] = push_data.get("is_jalr", 0)
             queue_storage[tail]["is_terminator"] = push_data.get("is_terminator", 0)
+            queue_storage[tail]["has_dest"] = push_data.get("has_dest", 1)
             tail = (tail + 1) % depth
 
         # Apply Retire (Pop)

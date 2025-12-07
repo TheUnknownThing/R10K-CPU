@@ -8,6 +8,7 @@ ROBEntryType = Record(
     dest_logical=Bits(5),
     dest_new_physical=Bits(6),
     dest_old_physical=Bits(6),
+    has_dest=Bits(1),
     imm=Bits(32),
     ready=Bits(1),
     is_branch=Bits(1),

@@ -12,6 +12,7 @@ class InstructionPushEntry:
     dest_logical: Value
     dest_new_physical: Value
     dest_old_physical: Value
+    has_dest: Value
     imm: Value
     is_branch: Value
     is_alu: Value
@@ -40,6 +41,7 @@ class ActiveList(Downstream):
             dest_logical=push_inst.dest_logical.optional(Bits(5)(0)),
             dest_new_physical=push_inst.dest_new_physical.optional(Bits(6)(0)),
             dest_old_physical=push_inst.dest_old_physical.optional(Bits(6)(0)),
+            has_dest=push_inst.has_dest.optional(Bits(1)(0)),
             imm=push_inst.imm.optional(Bits(32)(0)),
             ready=Bits(1)(0),
             is_branch=push_inst.is_branch.optional(Bits(1)(0)),
@@ -63,6 +65,7 @@ class ActiveList(Downstream):
             dest_logical=bundle.dest_logical,
             dest_new_physical=bundle.dest_new_physical,
             dest_old_physical=bundle.dest_old_physical,
+            has_dest=bundle.has_dest,
             imm=bundle.imm,
             ready=Bits(1)(1),
             is_branch=bundle.is_branch,
