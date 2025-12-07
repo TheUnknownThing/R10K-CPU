@@ -17,3 +17,8 @@ def sext(value: Value, target_type: DType) -> Value:
         Bits(delta_bits)((1 << delta_bits) - 1), Bits(delta_bits)(0)
     )
     return higher.concat(value).bitcast(target_type)
+
+
+def attach_context(value: Value) -> Value:
+    """Attach context information to a value. Use for conditional control flow."""
+    return value | value
