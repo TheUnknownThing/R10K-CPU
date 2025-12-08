@@ -1,6 +1,7 @@
+from dataclasses import dataclass
 from enum import Enum
 from math import ceil, log2
-from assassyn.frontend import Bits, Record
+from assassyn.frontend import Bits, Record, Value
 
 
 ROBEntryType = Record(
@@ -90,3 +91,18 @@ ALUQueueEntryType = Record(
     branch_flip=Bits(1),
     issued=Bits(1),
 )
+
+
+@dataclass(frozen=True)
+class FetcherImplEntry:
+    decode_success: Value
+    stall: Value
+    is_branch: Value
+    branch_offset: Value
+
+
+@dataclass(frozen=True)
+class FetcherFlushEntry:
+    enable: Value
+    PC: Value
+    offset: Value

@@ -1,20 +1,9 @@
 from dataclasses import dataclass
 from assassyn.frontend import *
+from r10k_cpu.common import FetcherFlushEntry, FetcherImplEntry
 from r10k_cpu.modules.decoder import Decoder
 from r10k_cpu.utils import Bool
 
-@dataclass(frozen=True)
-class FetcherImplEntry:
-    decode_success: Value
-    stall: Value 
-    is_branch: Value
-    branch_offset: Value
-
-@dataclass
-class FetcherFlushEntry:
-    enable: Value
-    PC: Value
-    offset: Value
 
 class FetcherImpl(Downstream):
     stalled: Array
@@ -42,7 +31,7 @@ class FetcherImpl(Downstream):
         predict_branch = predict_branch.optional(Bool(0))
         branch_offset = entry.branch_offset.optional(Bits(32)(4))
         stall = entry.stall.optional(Bool(0))
-        
+
         new_stalled = (self.stalled[0] | stall) & ~flush_enable
 
         offset = (is_branch & predict_branch).select(branch_offset, Bits(32)(4))
