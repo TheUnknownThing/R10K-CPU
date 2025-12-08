@@ -10,6 +10,12 @@ class FetcherImplEntry:
     is_branch: Value
     branch_offset: Value
 
+@dataclass
+class FetcherFlushEntry:
+    enable: Value
+    PC: Value
+    offset: Value
+
 class FetcherImpl(Downstream):
     stalled: Array
 
@@ -24,16 +30,14 @@ class FetcherImpl(Downstream):
         PC_addr: Value,
         decoder: Decoder,
         icache: SRAM,
-        flush_enable: Value,
-        flush_PC: Value,
-        flush_offset: Value,
+        flush_entry: FetcherFlushEntry,
         predict_branch: Value,
         entry: FetcherImplEntry,
     ):
         decode_success = entry.decode_success.optional(Bool(0))
-        flush_enable = flush_enable.optional(Bool(0))
-        flush_PC = flush_PC.optional(Bits(32)(0))
-        flush_offset = flush_offset.optional(Bits(32)(0))
+        flush_enable = flush_entry.enable.optional(Bool(0))
+        flush_PC = flush_entry.PC.optional(Bits(32)(0))
+        flush_offset = flush_entry.offset.optional(Bits(32)(0))
         is_branch = entry.is_branch.optional(Bool(0))
         predict_branch = predict_branch.optional(Bool(0))
         branch_offset = entry.branch_offset.optional(Bits(32)(4))

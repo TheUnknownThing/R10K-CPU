@@ -9,6 +9,7 @@ from r10k_cpu.downstreams.active_list import ActiveList
 from r10k_cpu.downstreams.alu_queue import ALUQueue
 from r10k_cpu.downstreams.lsq import LSQ
 from r10k_cpu.downstreams.map_table import MapTable, MapTableWriteEntry
+from r10k_cpu.downstreams.speculation_state import SpeculationState
 from r10k_cpu.modules.commit import Commit
 from r10k_cpu.modules.decoder import Decoder
 from r10k_cpu.modules.driver import Driver
@@ -45,6 +46,7 @@ def build_cpu(
         decoder = Decoder()
         fetcher = Fetcher()
         fetcher_impl = FetcherImpl()
+        speculation_state = SpeculationState()
 
         physical_register_file = RegArray(Bits(32), 64, initializer=[0] * 64)
         # NOTE: register_ready indicates whether a physical register contains valid data.
@@ -105,21 +107,21 @@ def build_cpu(
             lsq_entry,
             free_list_pop_enable,
             map_table_entry,
-        ) = decoder.build(icache.dout, map_table, free_list, active_list)
+            into_speculating,
+        ) = decoder.build(
+            icache.dout, map_table, free_list, active_list, speculation_state
+        )
 
         # TODO: Branch prediction is temporarily always jump
         predict_branch = Bits(1)(1)
 
-        # TODO: Flush signals are from commit stage
         fetcher_impl.build(
             PC_reg=PC_reg,
             PC_addr=PC_addr,
             decoder=decoder,
             icache=icache,
             entry=fetcher_entry,
-            flush_enable=TODO,
-            flush_PC=TODO,
-            flush_offset=TODO,
+            flush_entry=fetcher_flush_entry,
             predict_branch=predict_branch,
         )
 
@@ -160,6 +162,11 @@ def build_cpu(
             push_enable=lsq_push_enable,
             push_data=lsq_entry,
             active_list_idx=active_list_idx,
+        )
+
+        speculation_state.build(
+            into_speculating=into_speculating,
+            out_speculating=out_branch,
         )
 
     print(sys)
