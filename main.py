@@ -182,6 +182,7 @@ def build_cpu(
             push_enable=lsq_push_enable,
             push_data=lsq_entry,
             active_list_idx=active_list_idx,
+            store_buffer=store_buffer,
         )
 
         speculation_state.build(
