@@ -9,6 +9,11 @@ from r10k_cpu.downstreams.active_list import ActiveList
 from r10k_cpu.downstreams.alu_queue import ALUQueue
 from r10k_cpu.downstreams.lsq import LSQ
 from r10k_cpu.downstreams.map_table import MapTable, MapTableWriteEntry
+from r10k_cpu.downstreams.predictor import (
+    AlwaysBranchPredictor,
+    PredictFeedback,
+    Predictor,
+)
 from r10k_cpu.downstreams.speculation_state import SpeculationState
 from r10k_cpu.modules.commit import Commit
 from r10k_cpu.modules.decoder import Decoder
@@ -51,6 +56,7 @@ def build_cpu(
         fetcher_impl = FetcherImpl()
         speculation_state = SpeculationState()
         scheduler = Scheduler()
+        predictor: Predictor = AlwaysBranchPredictor()
 
         physical_register_file = RegArray(Bits(32), 64, initializer=[0] * 64)
         # NOTE: register_ready indicates whether a physical register contains valid data.
@@ -137,7 +143,14 @@ def build_cpu(
         )
 
         # TODO: Branch prediction is temporarily always jump
-        predict_branch = Bits(1)(1)
+        predict_branch = predictor.build(
+            alu_queue_entry.PC,
+            PredictFeedback(
+                Bits(32)(0),
+                Bits(1)(0),
+                Bits(1)(0),
+            ),
+        )
 
         fetcher_impl.build(
             PC_reg=PC_reg,
