@@ -86,7 +86,6 @@ def build_cpu(
             active_list_queue=active_list.queue,
             register_ready=register_ready,
             physical_register_file=physical_register_file,
-            store_buffer=store_buffer,
         )
 
         alu.build(
@@ -128,7 +127,7 @@ def build_cpu(
             map_table_entry,
             into_speculating,
         ) = decoder.build(
-            icache.dout, map_table, free_list, active_list, speculation_state
+            icache.dout, map_table, free_list, active_list, speculation_state, register_ready
         )
 
         # TODO: Branch prediction is temporarily always jump
