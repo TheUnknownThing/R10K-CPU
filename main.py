@@ -74,9 +74,12 @@ def build_cpu(
             commit_logical,
             commit_physical,
             flush_recover,
+            fetcher_flush_entry,
+            out_branch,
         ) = commit.build(
             active_list_queue=active_list.queue,
             register_ready=register_ready,
+            physical_register_file=physical_register_file,
         )
 
         alu.build(
@@ -143,6 +146,8 @@ def build_cpu(
             push_enable=pop_instruction,
             push_data=old_physical,
             pop_enable=free_list_pop_enable,
+            make_snapshot=into_speculating,
+            flush_recover=flush_recover,
         )
 
         active_list_idx = active_list.build(
