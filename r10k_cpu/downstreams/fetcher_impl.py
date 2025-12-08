@@ -49,7 +49,7 @@ class FetcherImpl(Downstream):
 
         new_PC = flush_enable.select(
             flush_PC + flush_offset,
-            PC_addr + decode_success.select(offset, Bits(0)(0)),
+            PC_addr + decode_success.select(offset, Bits(32)(0)),
         )
 
         PC_reg[0] = new_PC
