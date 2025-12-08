@@ -25,6 +25,7 @@ class Decoder(Module):
         free_list: FreeList,
         active_list: ActiveList,
         speculation_state: SpeculationState,
+        register_ready: Array,
     ):
         PC: Value = self.pop_all_ports(
             validate=True
@@ -45,6 +46,9 @@ class Decoder(Module):
         physical_rd = dest_valid.select(free_list.free_reg(), free_list.zero_reg)
         physical_rs1 = map_table.read_spec(rs1)
         physical_rs2 = map_table.read_spec(rs2)
+
+        with Condition(dest_valid):
+            register_ready[physical_rd] = Bits(1)(0)
 
         wait_until(~active_list.is_full())
         wait_until(~args.is_branch | ~speculation_state.speculating[0])
