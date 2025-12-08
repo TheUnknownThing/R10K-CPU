@@ -111,7 +111,7 @@ def build_cpu(
             lsq_entry,
             free_list_pop_enable,
             map_table_entry,
-        ) = decoder.build(dcache.dout, map_table, free_list, active_list)
+        ) = decoder.build(instruction_reg=icache.dout, map_table, free_list, active_list)
 
         # TODO: Branch prediction is temporarily always jump
         active_list_entry = active_list_entry_partial(predict_branch=Bits(1)(1))
