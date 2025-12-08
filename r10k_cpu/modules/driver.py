@@ -8,6 +8,6 @@ class Driver(Module):
         self.name = "Driver"
 
     @module.combinational
-    def build(self, commit: Module):
-        # fetcher.async_called()
+    def build(self, fetcher: Module, commit: Module):
+        fetcher.async_called()
         commit.async_called()

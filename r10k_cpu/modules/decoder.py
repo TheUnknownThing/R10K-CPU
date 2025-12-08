@@ -2,6 +2,7 @@ import functools
 from assassyn.frontend import *
 from r10k_cpu.downstreams.active_list import ActiveList, InstructionPushEntry
 from r10k_cpu.downstreams.alu_queue import ALUQueuePushEntry
+from r10k_cpu.downstreams.fetcher_impl import FetcherImplEntry
 from r10k_cpu.downstreams.free_list import FreeList
 from r10k_cpu.downstreams.lsq import LSQPushEntry
 from r10k_cpu.downstreams.map_table import MapTable, MapTableWriteEntry
@@ -96,7 +97,15 @@ class Decoder(Module):
             physical_value=physical_rd,
         )
 
+        fetcher_entry = FetcherImplEntry(
+            decode_success=attach_context(Bits(1)(1)),
+            stall=args.is_jump | args.is_terminator,
+            is_branch=args.is_branch,
+            branch_offset=args.imm,
+        )
+
         return (
+            fetcher_entry,
             active_list_entry_partial,
             alu_push_enable,
             alu_queue_entry,

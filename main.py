@@ -3,6 +3,7 @@ from assassyn.backend import *
 from assassyn import utils
 from typing import List
 
+from r10k_cpu.downstreams.fetcher_impl import FetcherImpl
 from r10k_cpu.downstreams.free_list import FreeList
 from r10k_cpu.downstreams.active_list import ActiveList
 from r10k_cpu.downstreams.alu_queue import ALUQueue
@@ -11,6 +12,7 @@ from r10k_cpu.downstreams.map_table import MapTable, MapTableWriteEntry
 from r10k_cpu.modules.commit import Commit
 from r10k_cpu.modules.decoder import Decoder
 from r10k_cpu.modules.driver import Driver
+from r10k_cpu.modules.fetcher import Fetcher
 from r10k_cpu.modules.lsu import LSU
 from r10k_cpu.modules.alu import ALU
 from r10k_cpu.modules.writeback import WriteBack
@@ -41,6 +43,8 @@ def build_cpu(
         lsq = LSQ(depth=2**5)  # LSQ depth = 32
         map_table = MapTable(num_logical=32, physical_bits=6)
         decoder = Decoder()
+        fetcher = Fetcher()
+        fetcher_impl = FetcherImpl()
 
         physical_register_file = RegArray(Bits(32), 64, initializer=[0] * 64)
         # NOTE: register_ready indicates whether a physical register contains valid data.
@@ -55,7 +59,9 @@ def build_cpu(
         icache = SRAM(width=32, depth=0x100000, init_file=sram_file)
         icache.name = "memory_instruction"
 
-        driver.build(commit=commit)
+        PC_reg, PC_addr = fetcher.build()
+
+        driver.build(fetcher=fetcher, commit=commit)
 
         (
             pop_instruction,
@@ -91,6 +97,7 @@ def build_cpu(
         )
 
         (
+            fetcher_entry,
             active_list_entry_partial,
             alu_push_enable,
             alu_queue_entry,
@@ -101,7 +108,22 @@ def build_cpu(
         ) = decoder.build(icache.dout, map_table, free_list, active_list)
 
         # TODO: Branch prediction is temporarily always jump
-        active_list_entry = active_list_entry_partial(predict_branch=Bits(1)(1))
+        predict_branch = Bits(1)(1)
+
+        # TODO: Flush signals are from commit stage
+        fetcher_impl.build(
+            PC_reg=PC_reg,
+            PC_addr=PC_addr,
+            decoder=decoder,
+            icache=icache,
+            entry=fetcher_entry,
+            flush_enable=TODO,
+            flush_PC=TODO,
+            flush_offset=TODO,
+            predict_branch=predict_branch,
+        )
+
+        active_list_entry = active_list_entry_partial(predict_branch=predict_branch)
 
         commit_write = MapTableWriteEntry(
             enable=commit_write_enable,
