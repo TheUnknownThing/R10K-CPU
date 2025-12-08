@@ -1,17 +1,13 @@
-from dataclasses import dataclass
 from assassyn.frontend import *
 from r10k_cpu.utils import Bool
 
 
-@dataclass
 class SpeculationState(Downstream):
     speculating: Array
 
     def __init__(self):
         super().__init__()
         self.speculating = RegArray(Bool, 1)
-        self.inst_address = RegArray(Bits(32), 1)
-        self.offset = RegArray(Bits(32), 1)
 
     @downstream.combinational
     def build(

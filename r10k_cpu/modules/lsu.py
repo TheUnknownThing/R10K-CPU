@@ -1,17 +1,17 @@
 from assassyn.frontend import *
-from r10k_cpu.downstreams.active_list import ActiveList
+from assassyn.ir.dtype import RecordValue
 from r10k_cpu.common import LSQEntryType
 
 class LSU(Module):
     """Performs load and store operations."""
 
     def __init__(self):
-        super().__init__(ports={"instr": LSQEntryType})
+        super().__init__(ports={"instr": Port(LSQEntryType)})
         self.name = "LSU"
     
     @module.combinational
     def build(self, physical_register_file: Array, memory: SRAM, wb: Module):
-        instr = self.pop_all_ports(False)
+        instr: RecordValue = LSQEntryType.view(self.pop_all_ports(False))
         
         store_active = (instr.is_store & instr.valid).bitcast(Bits(1)) # store only when committed
         load_active = (instr.is_load & instr.valid).bitcast(Bits(1))

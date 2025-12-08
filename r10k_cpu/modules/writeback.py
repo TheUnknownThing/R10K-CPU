@@ -6,13 +6,13 @@ class WriteBack(Module):
 
     def __init__(self):
         super().__init__(ports={
-            "is_load": Bits(1),
-            "is_store": Bits(1),
-            "need_update_active_list": Bits(1),
-            "op_type": Bits(3),
-            "dest_physical": Bits(6),
-            "active_list_idx": Bits(5),
-            "addr": Bits(32),
+            "is_load": Port(Bits(1)),
+            "is_store": Port(Bits(1)),
+            "need_update_active_list": Port(Bits(1)),
+            "op_type": Port(Bits(3)),
+            "dest_physical": Port(Bits(6)),
+            "active_list_idx": Port(Bits(5)),
+            "addr": Port(Bits(32)),
         })
         self.name = "WriteBack"
     

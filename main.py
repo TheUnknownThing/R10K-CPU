@@ -21,6 +21,7 @@ from r10k_cpu.modules.scheduler import Scheduler
 
 from r10k_cpu.common import LSQEntryType
 
+
 def build_cpu(
     sram_file: str | None = None,
     resource_base: str = os.getcwd(),
@@ -127,7 +128,12 @@ def build_cpu(
             map_table_entry,
             into_speculating,
         ) = decoder.build(
-            icache.dout, map_table, free_list, active_list, speculation_state, register_ready
+            icache.dout,
+            map_table,
+            free_list,
+            active_list,
+            speculation_state,
+            register_ready,
         )
 
         # TODO: Branch prediction is temporarily always jump
@@ -207,7 +213,9 @@ def build_cpu(
 
 
 if __name__ == "__main__":
-    sys, simulator_binary, verilog_path = build_cpu()
+    sys, simulator_binary, verilog_path = build_cpu(
+        sram_file="asms/empty/empty.hex",
+    )
     sim_output = utils.run_simulator(binary_path=simulator_binary)
     print("Simulation output:\n", sim_output)
     utils.run_verilator(verilog_path)

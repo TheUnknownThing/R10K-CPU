@@ -1,4 +1,5 @@
 from assassyn.frontend import *
+from assassyn.ir.dtype import RecordValue
 from r10k_cpu.common import (
     ALUQueueEntryType,
     ALU_CODE_LEN,
@@ -20,12 +21,12 @@ class ALU(Module):
     """
 
     def __init__(self):
-        super().__init__(ports={"instr": ALUQueueEntryType})
+        super().__init__(ports={"instr": Port(ALUQueueEntryType)})
         self.name = "ALU"
 
     @module.combinational
     def build(self, physical_register_file: Array, register_ready: Array, active_list: ActiveList):
-        instr = self.pop_all_ports(False)
+        instr: RecordValue = ALUQueueEntryType.view(self.pop_all_ports(False))
 
         op_a = self._select_operand(instr, instr.operant1_from, physical_register_file)
         op_b = self._select_operand(instr, instr.operant2_from, physical_register_file)
@@ -91,7 +92,7 @@ class ALU(Module):
 
     @staticmethod
     def _select_operand(
-        instr: Value, selector: Value, physical_register_file: Array
+        instr: RecordValue, selector: Value, physical_register_file: Array
     ) -> Value:
         literal_four = Bits(32)(4)
         sources = {
