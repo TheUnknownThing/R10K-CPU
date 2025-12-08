@@ -69,7 +69,7 @@ def build_cpu(
 
         PC_reg, PC_addr = fetcher.build()
 
-        driver.build(fetcher=fetcher, commit=commit)
+        driver.build(fetcher=fetcher, commit=commit, scheduler=scheduler)
 
         (
             pop_instruction,
