@@ -1,5 +1,6 @@
 from assassyn.frontend import *
 from dataclass.circular_queue import CircularQueue
+from r10k_cpu.common import ROBEntryType
 
 class Commit(Module):
     """Commits instructions from the Active List."""
@@ -12,7 +13,7 @@ class Commit(Module):
     def build(self, active_list_queue: CircularQueue, register_ready: Array):
         """Graduate instructions, free physical registers, and surface map-table updates."""
 
-        front_entry = active_list_queue.front()
+        front_entry = ROBEntryType.view(active_list_queue.front())
         retire_with_dest = front_entry.ready & front_entry.has_dest
         with Condition(retire_with_dest):
             register_ready[front_entry.dest_old_physical] = Bits(1)(0)

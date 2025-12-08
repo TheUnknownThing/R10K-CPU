@@ -155,7 +155,7 @@ def build_cpu(
 
     print(sys)
     conf = config(
-        verilog=utils.has_verilator(),
+        verilog=utils.has_verilator(), # pyright: ignore[reportArgumentType]
         sim_threshold=sim_threshold,
         idle_threshold=idle_threshold,
         resource_base=str(workspace_path),
