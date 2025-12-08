@@ -7,18 +7,51 @@ class FreeList(Downstream):
     queue: CircularQueue
     zero_reg: Value
 
+    # Only snapshot_head is needed to track the head position for recovery, because the push operations before branch are valid.
+    snapshot_head: Array
+
     def __init__(self, register_number: int):
         super().__init__()
         bits = ceil(log2(register_number))
 
-        # Initialize the free list with all registers available, except register 0 which is reserved
+        # Initialize the free list with all registers available, except register 0 which is reserved. 
+        # To prevent overlap in speculative scenarios, we double the size of the free list.
         initializer = [i + 1 for i in range(register_number - 1)]
-        self.queue = CircularQueue(Bits(bits), register_number - 1, initializer=initializer, default_count=register_number - 1)
+        initializer = initializer + [0] * (register_number * 2 - len(initializer))
+        self.queue = CircularQueue(
+            Bits(bits),
+            register_number * 2,
+            initializer=initializer,
+            default_count=register_number - 1,
+        )
         self.zero_reg = Bits(bits)(0)
 
+        self.snapshot_head = RegArray(Bits(self.queue.addr_bits), 1)
+
     @downstream.combinational
-    def build(self, pop_enable: Value, push_enable: Value, push_data: Value):
-        self.queue.operate(pop_enable=pop_enable, push_enable=push_enable, push_data=push_data)
+    def build(
+        self,
+        pop_enable: Value,
+        push_enable: Value,
+        push_data: Value,
+        make_snapshot: Value,
+        flush_recover: Value,
+    ):
+        with Condition(make_snapshot):
+            self.snapshot_head[0] = self.queue.get_head()
+
+        with Condition(flush_recover):
+            self.queue._head[0] = self.snapshot_head[0]
+            self.queue._count[0] = (self.queue.get_tail() > self.queue.get_head()).select(
+                (self.queue._tail[0] - self.snapshot_head[0]).zext(UInt(self.queue.count_bits)),
+                UInt(self.queue.count_bits)(self.queue.depth) - (self.snapshot_head[0] - self.queue._tail[0]).zext(UInt(self.queue.count_bits)),
+            ).bitcast(Bits(self.queue.count_bits))
+
+        self.queue.operate(
+            pop_enable=pop_enable & ~flush_recover,
+            push_enable=push_enable & ~flush_recover,
+            push_data=push_data,
+        )
 
     def free_reg(self) -> Value:
         return self.queue.front()
