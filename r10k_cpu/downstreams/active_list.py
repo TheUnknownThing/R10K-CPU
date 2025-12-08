@@ -60,6 +60,8 @@ class ActiveList(Downstream):
             push_enable=push_valid, push_data=entry, pop_enable=pop_enable
         )
 
+        return self.queue.get_tail()
+
     def set_ready(self, index: Value, actual_branch: Optional[Value] = None) -> None:
         bundle = self.queue[index]
         new_bundle = replace_bundle(

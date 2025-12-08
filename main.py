@@ -9,12 +9,14 @@ from r10k_cpu.downstreams.alu_queue import ALUQueue
 from r10k_cpu.downstreams.lsq import LSQ
 from r10k_cpu.downstreams.map_table import MapTable, MapTableWriteEntry
 from r10k_cpu.modules.commit import Commit
+from r10k_cpu.modules.decoder import Decoder
 from r10k_cpu.modules.driver import Driver
 from r10k_cpu.modules.lsu import LSU
 from r10k_cpu.modules.alu import ALU
 from r10k_cpu.modules.writeback import WriteBack
 
 DEFAULT_WORKSPACE = Path(__file__).with_name(".workspace")
+
 
 def build_cpu(
     workspace: Path | str | None = None,
@@ -25,7 +27,7 @@ def build_cpu(
 
     if sim_threshold <= 0 or idle_threshold <= 0:
         raise ValueError("Thresholds must be positive.")
-    
+
     workspace_path = Path(workspace) if workspace is not None else DEFAULT_WORKSPACE
     workspace_path.mkdir(parents=True, exist_ok=True)
 
@@ -54,11 +56,14 @@ def build_cpu(
         alu_queue = ALUQueue(depth=2**5)  # ALU Queue depth = 32
         lsq = LSQ(depth=2**5)  # LSQ depth = 32
         map_table = MapTable(num_logical=32, physical_bits=6)
+        decoder = Decoder()
 
         physical_register_file = RegArray(Bits(32), 64, initializer=[0] * 64)
         # NOTE: register_ready indicates whether a physical register contains valid data.
         # It is maintained by Writeback stage (sets to 1) and Commit stage (sets to 0).
-        register_ready = RegArray(Bits(1), 64, initializer=[1] * 64)  # All registers are free at start
+        register_ready = RegArray(
+            Bits(1), 64, initializer=[1] * 64
+        )  # All registers are free at start
 
         dcache = SRAM(width=32, depth=data_word_depth, init_file=str(data_image_file))
         dcache.name = "memory_data"
@@ -98,7 +103,19 @@ def build_cpu(
             memory=dcache,
         )
 
-        rename_write = map_table.idle_port() # TODO: rename_write needs to be set to ID's return signal
+        (
+            active_list_entry_partial,
+            alu_push_enable,
+            alu_queue_entry,
+            lsq_push_enable,
+            lsq_entry,
+            free_list_pop_enable,
+            map_table_entry,
+        ) = decoder.build(dcache.dout, map_table, free_list, active_list)
+
+        # TODO: Branch prediction is temporarily always jump
+        active_list_entry = active_list_entry_partial(predict_branch=Bits(1)(1))
+
         commit_write = MapTableWriteEntry(
             enable=commit_write_enable,
             logical_idx=commit_logical,
@@ -106,7 +123,7 @@ def build_cpu(
         )
 
         map_table.build(
-            rename_write=rename_write,
+            rename_write=map_table_entry,
             commit_write=commit_write,
             flush_to_commit=flush_recover,
         )
@@ -114,22 +131,26 @@ def build_cpu(
         free_list.build(
             push_enable=pop_instruction,
             push_data=old_physical,
-            # TODO: pop_enable needs to be set to ID's return signal
+            pop_enable=free_list_pop_enable,
         )
 
-        active_list.build(
+        active_list_idx = active_list.build(
             pop_enable=pop_instruction,
-            # TODO: push_inst needs to be set to ID's return signal
+            push_inst=active_list_entry,
         )
 
         alu_queue.build(
             pop_enable=alu_pop,
-            # TODO: push_enable and push_data need to be set to ID's return signal
+            push_enable=alu_push_enable,
+            push_data=alu_queue_entry,
+            active_list_idx=active_list_idx,
         )
 
         lsq.build(
             pop_enable=mem_pop,
-            # TODO: push_enable and push_data need to be set to ID's return signal
+            push_enable=lsq_push_enable,
+            push_data=lsq_entry,
+            active_list_idx=active_list_idx,
         )
 
     print(sys)
@@ -146,6 +167,7 @@ def build_cpu(
     simulator_binary = utils.build_simulator(simulator_path)
     print(f"Simulator binary built: {simulator_binary}")
     return sys, simulator_binary, verilog_path
+
 
 if __name__ == "__main__":
     sys, simulator_binary, verilog_path = build_cpu()
