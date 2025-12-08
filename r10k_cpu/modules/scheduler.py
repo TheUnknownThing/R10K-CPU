@@ -21,7 +21,7 @@ class Scheduler(Module):
         
         with Condition(alu_selection.valid):
             alu_queue.mark_issued(index=alu_selection.index)
-            alu.async_called(instr=alu_selection.value)
+            alu.async_called(instr=alu_selection.data)
         
         with Condition(buffer_instr.is_store):
             # NOTE: why we use is_store here?
@@ -43,4 +43,4 @@ class Scheduler(Module):
         
         with Condition(lsq_selection.valid & ~buffer_instr.is_store):
             lsq.mark_issued(index=lsq_selection.index)
-            lsu.async_called(instr=lsq_selection.value)
+            lsu.async_called(instr=lsq_selection.data)
