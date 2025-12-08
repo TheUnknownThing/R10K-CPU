@@ -47,11 +47,11 @@ class Decoder(Module):
         physical_rs1 = map_table.read_spec(rs1)
         physical_rs2 = map_table.read_spec(rs2)
 
-        with Condition(dest_valid):
-            register_ready[physical_rd] = Bits(1)(0)
-
         wait_until(~active_list.is_full())
         wait_until(~args.is_branch | ~speculation_state.speculating[0])
+
+        with Condition(dest_valid):
+            register_ready[physical_rd] = Bits(1)(0)
 
         # Branch predictor is attached outside of the decoder
         active_list_entry_partial = functools.partial(
