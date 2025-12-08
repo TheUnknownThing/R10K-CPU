@@ -162,6 +162,9 @@ class CircularQueue:
     def get_head(self) -> Value:
         return self._head[0]
 
+    def get_head(self) -> Value:
+        return self._head[0]
+
     def _increment_pointer(self, pointer: Value) -> Value:
         pointer_uint = pointer.bitcast(UInt(self.addr_bits))
         wrapped = pointer_uint == self._last_index

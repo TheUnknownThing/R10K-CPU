@@ -18,6 +18,7 @@ from r10k_cpu.modules.lsu import LSU
 from r10k_cpu.modules.alu import ALU
 from r10k_cpu.modules.writeback import WriteBack
 
+from r10k_cpu.common import LSQEntryType
 
 def build_cpu(
     sram_file: str | None = None,
@@ -55,6 +56,9 @@ def build_cpu(
             Bits(1), 64, initializer=[1] * 64
         )  # All registers are free at start
 
+        # This buffer stores store instruction that have been committed but not yet executed.
+        store_buffer = RegArray(LSQEntryType, 1, initializer=[0])
+
         dcache = SRAM(width=32, depth=0x100000, init_file=sram_file)
         dcache.name = "memory_data"
 
@@ -80,6 +84,7 @@ def build_cpu(
             active_list_queue=active_list.queue,
             register_ready=register_ready,
             physical_register_file=physical_register_file,
+            store_buffer=store_buffer,
         )
 
         alu.build(

@@ -23,7 +23,7 @@ class LSQ(Downstream):
         self.queue = CircularQueue(LSQEntryType, depth)
     
     @downstream.combinational
-    def build(self, push_enable: Value, push_data: LSQPushEntry, pop_enable: Value, active_list_idx: Value):
+    def build(self, push_enable: Value, push_data: LSQPushEntry, pop_enable: Value, active_list_idx: Value, store_buffer: Array):
         entry = LSQEntryType.bundle(
             valid=push_enable.optional(Bits(1)(0)),
             active_list_idx=active_list_idx,
@@ -40,6 +40,12 @@ class LSQ(Downstream):
         push_valid = push_enable.optional(Bits(1)(0))
         pop_enable = pop_enable.optional(Bits(1)(0))
 
+        with Condition(pop_enable):
+            # If we are popping a store instruction, we need to store it in the store buffer
+            entry_to_pop = self.queue[self.queue._head[0]]
+            with Condition(entry_to_pop.is_store):
+                store_buffer[0] = entry_to_pop
+
         self.queue.operate(push_enable=push_valid, push_data=entry, pop_enable=pop_enable)
 
     def select_first_ready(self, register_ready: Array) -> CircularQueueSelection:
@@ -53,9 +59,9 @@ class LSQ(Downstream):
             rs2_needed = entry.is_store
 
             store_before = self.is_store_before(index)
-            is_store = value.is_store
             
-            return entry.valid & rs1_ready & ((~rs2_needed) | rs2_ready) & ~entry.issued & (~store_before | is_store)
+            # The store is handled when committed and is issued from a buffer
+            return entry.valid & rs1_ready & ((~rs2_needed) | rs2_ready) & ~entry.issued & ~store_before & ~entry.is_store
 
         return self.queue.choose(selector)
     
