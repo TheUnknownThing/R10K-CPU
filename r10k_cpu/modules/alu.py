@@ -70,11 +70,9 @@ class ALU(Module):
         branch_valid = instr.valid & instr.is_branch
         branch_taken = branch_valid & branch_core
 
-        with Condition(branch_valid):
-            active_list_index = instr.active_list_idx
-        
         with Condition(instr.valid):
             # We always pass actual_branch here, but it only matters when is_branch is true
+            active_list_index = instr.active_list_idx
             active_list.set_ready(index=active_list_index, actual_branch=branch_taken)
 
 
