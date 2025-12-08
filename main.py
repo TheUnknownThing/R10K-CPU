@@ -15,11 +15,10 @@ from r10k_cpu.modules.lsu import LSU
 from r10k_cpu.modules.alu import ALU
 from r10k_cpu.modules.writeback import WriteBack
 
-DEFAULT_WORKSPACE = Path(__file__).with_name(".workspace")
-
 
 def build_cpu(
-    workspace: Path | str | None = None,
+    sram_file: str | None = None,
+    resource_base: str = os.getcwd(),
     sim_threshold: int = 256,
     idle_threshold: int = 256,
 ):
@@ -27,21 +26,6 @@ def build_cpu(
 
     if sim_threshold <= 0 or idle_threshold <= 0:
         raise ValueError("Thresholds must be positive.")
-
-    workspace_path = Path(workspace) if workspace is not None else DEFAULT_WORKSPACE
-    workspace_path.mkdir(parents=True, exist_ok=True)
-
-    data_image_file = workspace_path / "data.hex"
-    words: List[int] = []
-    if data_image_file.exists():
-        with open(data_image_file, "r", encoding="utf-8") as src:
-            for raw in src:
-                raw = raw.split("//")[0].strip()
-                if not raw:
-                    continue
-                words.append(int(raw, 16))
-
-    data_word_depth = max(1, (len(words) + 3) // 4)
 
     sys = SysBuilder("MIPS_R10K_OoO")
 
@@ -65,8 +49,11 @@ def build_cpu(
             Bits(1), 64, initializer=[1] * 64
         )  # All registers are free at start
 
-        dcache = SRAM(width=32, depth=data_word_depth, init_file=str(data_image_file))
+        dcache = SRAM(width=32, depth=0x100000, init_file=sram_file)
         dcache.name = "memory_data"
+
+        icache = SRAM(width=32, depth=0x100000, init_file=sram_file)
+        icache.name = "memory_instruction"
 
         driver.build(commit=commit)
 
@@ -111,7 +98,7 @@ def build_cpu(
             lsq_entry,
             free_list_pop_enable,
             map_table_entry,
-        ) = decoder.build(instruction_reg=icache.dout, map_table, free_list, active_list)
+        ) = decoder.build(icache.dout, map_table, free_list, active_list)
 
         # TODO: Branch prediction is temporarily always jump
         active_list_entry = active_list_entry_partial(predict_branch=Bits(1)(1))
@@ -155,10 +142,10 @@ def build_cpu(
 
     print(sys)
     conf = config(
-        verilog=utils.has_verilator(), # pyright: ignore[reportArgumentType]
+        verilog=utils.has_verilator(),  # pyright: ignore[reportArgumentType]
         sim_threshold=sim_threshold,
         idle_threshold=idle_threshold,
-        resource_base=str(workspace_path),
+        resource_base=resource_base,
         fifo_depth=1,
     )
 
