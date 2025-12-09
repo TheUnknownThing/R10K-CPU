@@ -1,5 +1,6 @@
 from assassyn.frontend import *
 from r10k_cpu.downstreams.active_list import ActiveList
+from r10k_cpu.downstreams.register_ready import RegisterReady
 
 class WriteBack(Module):
     """Handles the write-back stage of the LSU."""
@@ -17,7 +18,7 @@ class WriteBack(Module):
         self.name = "WriteBack"
     
     @module.combinational
-    def build(self, active_list: ActiveList, register_ready: Array, physical_register_file: Array, memory: SRAM):
+    def build(self, active_list: ActiveList, register_ready: RegisterReady, physical_register_file: Array, memory: SRAM):
         (
             is_load, 
             is_store, 
@@ -31,7 +32,7 @@ class WriteBack(Module):
         with Condition(is_load):
             memory_out = memory.dout[0]
             physical_register_file[dest_physical] = self.process_memory_data(op_type, memory_out, addr)
-            register_ready[dest_physical] = Bits(1)(1)
+            register_ready.mark_ready(dest_physical, enable=is_load)
         
         with Condition(need_update_active_list):
             active_list.set_ready(index=active_list_idx)

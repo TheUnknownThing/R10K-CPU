@@ -9,6 +9,7 @@ from r10k_cpu.downstreams.active_list import ActiveList
 from r10k_cpu.downstreams.alu_queue import ALUQueue
 from r10k_cpu.downstreams.lsq import LSQ
 from r10k_cpu.downstreams.map_table import MapTable, MapTableWriteEntry
+from r10k_cpu.downstreams.register_ready import RegisterReady
 from r10k_cpu.downstreams.predictor import (
     AlwaysBranchPredictor,
     PredictFeedback,
@@ -59,11 +60,8 @@ def build_cpu(
         predictor: Predictor = AlwaysBranchPredictor()
 
         physical_register_file = RegArray(Bits(32), 64, initializer=[0] * 64)
-        # NOTE: register_ready indicates whether a physical register contains valid data.
-        # It is maintained by Writeback stage (sets to 1) and Commit stage (sets to 0).
-        register_ready = RegArray(
-            Bits(1), 64, initializer=[1] * 64
-        )  # All registers are free at start
+        # Tracks readiness of each physical register; packed so we can atomically reset on flush.
+        register_ready = RegisterReady(num_registers=64)
 
         # This buffer stores store instruction that have been committed but not yet executed.
         store_buffer = RegArray(LSQEntryType, 1, initializer=[0])
@@ -92,7 +90,6 @@ def build_cpu(
         ) = commit.build(
             active_list_queue=active_list.queue,
             register_ready=register_ready,
-            physical_register_file=physical_register_file,
         )
 
         alu.build(
@@ -211,6 +208,8 @@ def build_cpu(
             into_speculating=into_speculating,
             out_speculating=out_branch,
         )
+
+        register_ready.build(flush_recover=flush_recover)
 
     print(sys)
     conf = config(

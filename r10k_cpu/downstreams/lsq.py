@@ -3,6 +3,7 @@ from assassyn.frontend import *
 from assassyn.ir.array import ArrayRead
 from dataclass.circular_queue import CircularQueue, CircularQueueSelection
 from r10k_cpu.common import LSQEntryType
+from r10k_cpu.downstreams.register_ready import RegisterReady
 from r10k_cpu.utils import is_between, replace_bundle
 
 @dataclass(frozen=True)
@@ -48,7 +49,7 @@ class LSQ(Downstream):
 
         self.queue.operate(push_enable=push_valid, push_data=entry, pop_enable=pop_enable, clear=flush.optional(Bits(1)(0)))
 
-    def select_first_ready(self, register_ready: Array) -> CircularQueueSelection:
+    def select_first_ready(self, register_ready: RegisterReady) -> CircularQueueSelection:
         selected_index = self.queue._zero_addr
         selected_distance = self.queue._zero
         selected_valid = Bits(1)(0)
@@ -109,8 +110,8 @@ class LSQ(Downstream):
         self.queue[index] = new_bundle
 
     @staticmethod
-    def _operand_ready(register_ready: Array, physical: Value) -> Value:
-        ready_bit = register_ready[physical].bitcast(Bits(1))
+    def _operand_ready(register_ready: RegisterReady, physical: Value) -> Value:
+        ready_bit = register_ready.read(physical).bitcast(Bits(1))
         return ready_bit
 
     def valid(self) -> Value:

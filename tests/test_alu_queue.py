@@ -149,6 +149,9 @@ class Driver(Module):
                     is_ready = cond.select(cycle_ready, is_ready)
                 return is_ready
 
+            def read(self, index):
+                return self.__getitem__(index)
+
         mock_ready = MockRegisterReady(ready_indices_map, cycle_val)
         selection = self.queue.select_first_ready(mock_ready)
 

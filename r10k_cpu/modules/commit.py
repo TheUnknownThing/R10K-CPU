@@ -2,6 +2,7 @@ from assassyn.frontend import *
 from dataclass.circular_queue import CircularQueue
 from r10k_cpu.common import ROBEntryType
 from r10k_cpu.downstreams.fetcher_impl import FetcherFlushEntry
+from r10k_cpu.downstreams.register_ready import RegisterReady
 
 
 class Commit(Module):
@@ -15,15 +16,14 @@ class Commit(Module):
     def build(
         self,
         active_list_queue: CircularQueue,
-        register_ready: Array,
-        physical_register_file: Array,
+        register_ready: RegisterReady,
     ):
         """Graduate instructions, free physical registers, and surface map-table updates."""
 
         front_entry = ROBEntryType.view(active_list_queue.front())
         retire_with_dest = front_entry.ready & front_entry.has_dest
         with Condition(retire_with_dest):
-            register_ready[front_entry.dest_old_physical] = Bits(1)(0)
+            register_ready.mark_not_ready(front_entry.dest_old_physical, enable=retire_with_dest)
 
         is_branch = front_entry.is_branch
         mispredict = is_branch & (

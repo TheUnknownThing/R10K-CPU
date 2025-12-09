@@ -6,6 +6,7 @@ from r10k_cpu.downstreams.fetcher_impl import FetcherImplEntry
 from r10k_cpu.downstreams.free_list import FreeList
 from r10k_cpu.downstreams.lsq import LSQPushEntry
 from r10k_cpu.downstreams.map_table import MapTable, MapTableWriteEntry
+from r10k_cpu.downstreams.register_ready import RegisterReady
 from r10k_cpu.downstreams.speculation_state import SpeculationState
 from r10k_cpu.instruction import select_instruction_args
 from r10k_cpu.utils import Bool, attach_context
@@ -25,7 +26,7 @@ class Decoder(Module):
         free_list: FreeList,
         active_list: ActiveList,
         speculation_state: SpeculationState,
-        register_ready: Array,
+        register_ready: RegisterReady,
     ):
         PC: Value = self.pop_all_ports(
             validate=True
@@ -51,7 +52,7 @@ class Decoder(Module):
         wait_until(~args.is_branch | ~speculation_state.speculating[0])
 
         with Condition(dest_valid):
-            register_ready[physical_rd] = Bits(1)(0)
+            register_ready.mark_not_ready(physical_rd, enable=dest_valid)
 
         # Branch predictor is attached outside of the decoder
         active_list_entry_partial = functools.partial(

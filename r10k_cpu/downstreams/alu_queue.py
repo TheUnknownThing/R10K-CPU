@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from assassyn.frontend import *
 from dataclass.circular_queue import CircularQueue, CircularQueueSelection
 from r10k_cpu.common import ALUQueueEntryType, OperantFrom, OPERANT_FROM_LEN
+from r10k_cpu.downstreams.register_ready import RegisterReady
 from r10k_cpu.utils import replace_bundle
 
 @dataclass(frozen=True)
@@ -49,7 +50,7 @@ class ALUQueue(Downstream):
 
         self.queue.operate(push_enable=push_valid, push_data=entry, pop_enable=pop_enable, clear=flush.optional(Bits(1)(0)))
 
-    def select_first_ready(self, register_ready: Array) -> CircularQueueSelection:
+    def select_first_ready(self, register_ready: RegisterReady) -> CircularQueueSelection:
         def selector(value: Value, _) -> Value:
             entry = ALUQueueEntryType.view(value)
             
@@ -74,8 +75,8 @@ class ALUQueue(Downstream):
 
 
     @staticmethod
-    def _operand_ready(register_ready: Array, physical: Value, needed: Value) -> Value:
-        ready_bit = register_ready[physical].bitcast(Bits(1))
+    def _operand_ready(register_ready: RegisterReady, physical: Value, needed: Value) -> Value:
+        ready_bit = register_ready.read(physical).bitcast(Bits(1))
         return (~needed) | (needed & ready_bit)
 
     def valid(self) -> Value:

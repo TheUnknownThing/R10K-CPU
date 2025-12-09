@@ -8,6 +8,7 @@ from r10k_cpu.common import (
     OperantFrom,
 )
 from r10k_cpu.downstreams.active_list import ActiveList
+from r10k_cpu.downstreams.register_ready import RegisterReady
 
 
 ALU_OP_COUNT = len(RV32I_ALU_Code)
@@ -25,7 +26,7 @@ class ALU(Module):
         self.name = "ALU"
 
     @module.combinational
-    def build(self, physical_register_file: Array, register_ready: Array, active_list: ActiveList):
+    def build(self, physical_register_file: Array, register_ready: RegisterReady, active_list: ActiveList):
         instr: RecordValue = ALUQueueEntryType.view(self.pop_all_ports(False))
 
         op_a = self._select_operand(instr, instr.operant1_from, physical_register_file)
@@ -69,7 +70,7 @@ class ALU(Module):
 
         with Condition(write_valid):
             physical_register_file[instr.rd_physical] = rd_value
-            register_ready[instr.rd_physical] = Bits(1)(1)
+            register_ready.mark_ready(instr.rd_physical, enable=write_valid)
 
         non_zero = result_value != Bits(32)(0)
         branch_core = instr.branch_flip.select(~non_zero, non_zero)
