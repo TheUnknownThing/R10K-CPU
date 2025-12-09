@@ -48,7 +48,7 @@ class FreeList(Downstream):
         with Condition(flush_recover):
             self.queue._head[0] = self.snapshot_head[0]
             self.queue._count[0] = (self.queue.get_tail() > self.queue.get_head()).select(
-                (self.queue._tail[0] - self.snapshot_head[0]).zext(UInt(self.queue.count_bits)),
+                (self.queue._tail[0].bitcast(UInt(self.queue.addr_bits)) - self.snapshot_head[0].bitcast(UInt(self.queue.addr_bits))).zext(UInt(self.queue.count_bits)),
                 UInt(self.queue.count_bits)(self.queue.depth) - (self.snapshot_head[0] - self.queue._tail[0]).zext(UInt(self.queue.count_bits)),
             ).bitcast(Bits(self.queue.count_bits))
 
