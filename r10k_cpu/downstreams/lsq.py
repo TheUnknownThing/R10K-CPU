@@ -49,21 +49,56 @@ class LSQ(Downstream):
         self.queue.operate(push_enable=push_valid, push_data=entry, pop_enable=pop_enable)
 
     def select_first_ready(self, register_ready: Array) -> CircularQueueSelection:
-        def selector(value: ArrayRead, index: Value) -> Value:
+        selected_data = self.queue._storage[0]
+        selected_index = self.queue._zero_addr
+        selected_distance = self.queue._zero
+        selected_valid = Bits(1)(0)
+
+        pointer = self.queue._head[0]
+        distance = self.queue._zero
+        count_uint = self.queue._count[0].bitcast(UInt(self.queue.count_bits))
+
+        seen_store = Bits(1)(0)
+
+        for offset in range(self.queue.depth):
+            offset_uint = UInt(self.queue.count_bits)(offset)
+            has_entry = offset_uint < count_uint
+
+            value = self.queue._storage[pointer]
             entry = LSQEntryType.view(value)
+
             rs1_ready = self._operand_ready(register_ready, entry.rs1_physical)
-            rs2_ready = self._operand_ready(register_ready, entry.rs2_physical)
-            
-            # rs1 is always needed for address
-            # rs2 is needed for store data
-            rs2_needed = entry.is_store
+            # We only choose loads here, so rs2 is not needed
 
-            store_before = self.is_store_before(index)
-            
-            # The store is handled when committed and is issued from a buffer
-            return entry.valid & rs1_ready & ((~rs2_needed) | rs2_ready) & ~entry.issued & ~store_before & ~entry.is_store
+            matches = (
+                entry.valid 
+                & rs1_ready
+                & ~entry.issued 
+                & ~seen_store 
+                & ~entry.is_store # LSQ only picks Loads here
+            )
 
-        return self.queue.choose(selector)
+            candidate_valid = has_entry & matches
+            
+            new_hit = candidate_valid & ~selected_valid
+
+            selected_data = new_hit.select(value, selected_data)
+            selected_index = new_hit.select(pointer, selected_index)
+            selected_distance = new_hit.select(distance, selected_distance)
+            selected_valid = selected_valid | candidate_valid
+
+            seen_store = seen_store | (has_entry & entry.valid & entry.is_store)
+
+            pointer = self.queue._increment_pointer(pointer)
+            distance_uint = distance.bitcast(UInt(self.queue.count_bits))
+            distance = (distance_uint + self.queue._one).bitcast(Bits(self.queue.count_bits))
+
+        return CircularQueueSelection(
+            data=self.queue._dtype.view(selected_data),
+            index=selected_index,
+            distance=selected_distance,
+            valid=selected_valid,
+        )
     
     def mark_issued(self, index: Value):
         bundle = self.queue[index]
