@@ -19,6 +19,7 @@ class Step:
     reg_ready: Optional[List[int]] = None
     issue_idx: Optional[int] = None
     check_idx: Optional[int] = None
+    flush: bool = False
 
 
 DEPTH = 4
@@ -86,6 +87,10 @@ STEPS = [
     
     # Case 7: Check index 2. Range [1, 2) -> {1}. 1 is Load. Expect 0.
     Step(24, check_idx=2),
+    Step(25, flush=True),
+    Step(26, push={"is_load": 1, "is_store": 0, "op_type": 0, "imm": 0}),
+    Step(27, flush=True, push={"is_load": 0, "is_store": 1, "op_type": 0, "imm": 0}),
+    Step(28),
 ]
 
 
@@ -116,6 +121,7 @@ class Driver(Module):
         push_rs2 = Bits(6)(0)
         push_imm = Bits(32)(0)
         active_idx = Bits(5)(0)
+        flush_en = Bits(1)(0)
 
         for idx, step in enumerate(STEPS):
             cond = cycle_val == UInt(32)(step.cycle)
@@ -133,6 +139,9 @@ class Driver(Module):
             if step.pop:
                 pop_en = cond.select(Bits(1)(1), pop_en)
 
+            if step.flush:
+                flush_en = cond.select(Bits(1)(1), flush_en)
+
         push_entry = LSQPushEntry(
             is_load=push_is_load,
             is_store=push_is_store,
@@ -143,7 +152,7 @@ class Driver(Module):
             imm=push_imm,
         )
 
-        self.queue.build(push_en, push_entry, pop_en, active_idx, self.store_buffer)
+        self.queue.build(push_en, push_entry, pop_en, active_idx, flush_en, self.store_buffer)
 
         # Issue logic
         issue_idx_val = Bits(self.queue.queue.addr_bits)(0)
@@ -334,14 +343,17 @@ def check(raw: str):
             for i in range(count):
                 idx = (head + i) % DEPTH
                 entry = queue_storage[idx]
-                
+
                 if entry["issued"]:
                     continue
-                
+
+                if entry["is_store"]:
+                    # LSQ only selects Loads, and Stores block subsequent Loads
+                    break
+
                 rs1_ok = entry["rs1"] in ready_regs
-                rs2_ok = (not entry["is_store"]) or (entry["rs2"] in ready_regs)
-                
-                if rs1_ok and rs2_ok:
+
+                if rs1_ok:
                     expected_sel_valid = 1
                     expected_sel_idx = idx
                     break
@@ -372,34 +384,43 @@ def check(raw: str):
 
         push = step.push if step else None
         pop = step.pop if step else False
+        flush = step.flush if step else False
 
-        if push:
-            idx = STEPS.index(step)
-            entry = {
-                "valid": 1,
-                "active_idx": idx,
-                "queue_idx": (tail + 1) % 32,
-                "is_load": push["is_load"],
-                "is_store": push["is_store"],
-                "imm": push["imm"],
-                "issued": 0,
-                "rs1": (idx + 2) % 64,
-                "rs2": (idx + 3) % 64,
-            }
-            queue_storage[tail] = entry
-            tail = (tail + 1) % DEPTH
+        if flush:
+            head = 0
+            tail = 0
+            count = 0
+        else:
+            if step and step.issue_idx is not None:
+                queue_storage[step.issue_idx]["issued"] = 1
 
-        if pop and count > 0:
-            # queue_storage[head]["valid"] = 0
-            head = (head + 1) % DEPTH
+            if push:
+                idx = STEPS.index(step)
+                entry = {
+                    "valid": 1,
+                    "active_idx": idx,
+                    "queue_idx": (tail + 1) % 32,
+                    "is_load": push["is_load"],
+                    "is_store": push["is_store"],
+                    "imm": push["imm"],
+                    "issued": 0,
+                    "rs1": (idx + 2) % 64,
+                    "rs2": (idx + 3) % 64,
+                }
+                queue_storage[tail] = entry
+                tail = (tail + 1) % DEPTH
 
-        if push and not pop:
-            count += 1
-        elif pop and not push and count > 0:
-            count -= 1
+            if pop and count > 0:
+                # queue_storage[head]["valid"] = 0
+                head = (head + 1) % DEPTH
+
+            if push and not pop:
+                count += 1
+            elif pop and not push and count > 0:
+                count -= 1
             
-        if step and step.issue_idx is not None:
-            queue_storage[step.issue_idx]["issued"] = 1
+    if step and step.issue_idx is not None:
+        queue_storage[step.issue_idx]["issued"] = 1
 
     # assert count == 0, "Queue should be empty after scenario"
 

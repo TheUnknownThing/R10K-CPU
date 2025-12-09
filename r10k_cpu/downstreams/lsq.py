@@ -23,7 +23,7 @@ class LSQ(Downstream):
         self.queue = CircularQueue(LSQEntryType, depth)
     
     @downstream.combinational
-    def build(self, push_enable: Value, push_data: LSQPushEntry, pop_enable: Value, active_list_idx: Value, store_buffer: Array):
+    def build(self, push_enable: Value, push_data: LSQPushEntry, pop_enable: Value, active_list_idx: Value, flush: Value, store_buffer: Array):
         entry = LSQEntryType.bundle(
             valid=push_enable.optional(Bits(1)(0)),
             active_list_idx=active_list_idx,
@@ -46,7 +46,7 @@ class LSQ(Downstream):
             with Condition(entry_to_pop.is_store):
                 store_buffer[0] = entry_to_pop
 
-        self.queue.operate(push_enable=push_valid, push_data=entry, pop_enable=pop_enable)
+        self.queue.operate(push_enable=push_valid, push_data=entry, pop_enable=pop_enable, clear=flush.optional(Bits(1)(0)))
 
     def select_first_ready(self, register_ready: Array) -> CircularQueueSelection:
         selected_index = self.queue._zero_addr
@@ -94,7 +94,7 @@ class LSQ(Downstream):
         selected_data = self.queue._storage[selected_index]
 
         return CircularQueueSelection(
-            data=self.queue._dtype.view(selected_data),
+            data=LSQEntryType.view(selected_data),
             index=selected_index,
             distance=selected_distance,
             valid=selected_valid,

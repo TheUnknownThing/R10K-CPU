@@ -15,6 +15,7 @@ class Step:
     retire: bool = False
     set_ready: Optional[int] = None  # index to set ready
     actual_branch: Optional[int] = None
+    flush: bool = False
 
 
 STEPS = [
@@ -98,12 +99,38 @@ STEPS = [
             "predict_branch": 0,
             "is_jump": 0,
             "is_jalr": 0,
-            "is_terminator": 1,
+            "is_terminator": 0,
         },
     ),
-    Step(14, set_ready=4, actual_branch=1),
-    Step(15, retire=True),
-    Step(16),  # Idle
+    Step(14, flush=True),
+    Step(
+        15,
+        push={
+            "pc": 0x2000,
+            "dest_logical": 6,
+            "dest_new_physical": 15,
+            "dest_old_physical": 6,
+            "imm": 0x600,
+            "is_branch": 0,
+            "predict_branch": 0,
+            "is_jump": 0,
+            "is_jalr": 0,
+            "is_terminator": 0,
+        },
+    ),
+    Step(16, flush=True, push={
+            "pc": 0x3000,
+            "dest_logical": 7,
+            "dest_new_physical": 16,
+            "dest_old_physical": 7,
+            "imm": 0x700,
+            "is_branch": 0,
+            "predict_branch": 0,
+            "is_jump": 0,
+            "is_jalr": 0,
+            "is_terminator": 0,
+        }), # Flush should take precedence
+    Step(17),
 ]
 
 
@@ -140,6 +167,7 @@ class Driver(Module):
         push_is_naturally_ready = Bits(1)(0)
 
         pop_enable = Bits(1)(0)
+        flush_enable = Bits(1)(0)
 
         # set_ready logic
         set_ready_en = Bits(1)(0)
@@ -169,6 +197,9 @@ class Driver(Module):
             if step.retire:
                 pop_enable = cond.select(Bits(1)(1), pop_enable)
 
+            if step.flush:
+                flush_enable = cond.select(Bits(1)(1), flush_enable)
+
             if step.set_ready is not None:
                 set_ready_en = cond.select(Bits(1)(1), set_ready_en)
                 set_ready_idx = cond.select(Bits(self.active_list.queue.addr_bits)(step.set_ready), set_ready_idx)
@@ -193,7 +224,11 @@ class Driver(Module):
             is_naturally_ready=push_is_naturally_ready,
         )
 
-        self.active_list.build(push_inst, pop_enable)
+        tail_idx = self.active_list.build(
+            push_inst=push_inst,
+            pop_enable=pop_enable,
+            flush=flush_enable,
+        )
 
         with Condition(set_ready_en):
             old_actual_branch = self.active_list.queue[set_ready_idx].actual_branch
@@ -376,40 +411,59 @@ def check(raw: str):
         retire = False
         set_ready_idx = None
         actual_branch = None
+        flush = False
 
         if step:
             push_data = step.push
             retire = step.retire
             set_ready_idx = step.set_ready
             actual_branch = step.actual_branch
+            flush = step.flush
 
-        # Apply Set Ready (happens at end of cycle effectively for next cycle view, but in hardware it's a write)
-        if set_ready_idx is not None:
-            queue_storage[set_ready_idx]["ready"] = 1
-            if actual_branch is not None:
-                queue_storage[set_ready_idx]["actual_branch"] = actual_branch
+        if flush:
+            head = 0
+            tail = 0
+            count = 0
+        else:
+            # Apply Set Ready (happens at end of cycle effectively for next cycle view, but in hardware it's a write)
+            if set_ready_idx is not None:
+                queue_storage[set_ready_idx]["ready"] = 1
+                if actual_branch is not None:
+                    queue_storage[set_ready_idx]["actual_branch"] = actual_branch
 
-        # Apply Push
-        if push_data:
-            queue_storage[tail]["pc"] = push_data["pc"]
-            queue_storage[tail]["ready"] = 0  # Reset ready on new push
-            queue_storage[tail]["imm"] = push_data["imm"]
-            queue_storage[tail]["actual_branch"] = 0
-            queue_storage[tail]["is_jump"] = push_data.get("is_jump", 0)
-            queue_storage[tail]["is_jalr"] = push_data.get("is_jalr", 0)
-            queue_storage[tail]["is_terminator"] = push_data.get("is_terminator", 0)
-            queue_storage[tail]["has_dest"] = push_data.get("has_dest", 1)
-            tail = (tail + 1) % depth
+            # Apply Push
+            if push_data:
+                entry = {
+                    "pc": push_data.get("pc", 0),
+                    "dest_logical": push_data.get("dest_logical", 0),
+                    "dest_new_physical": push_data.get("dest_new_physical", 0),
+                    "dest_old_physical": push_data.get("dest_old_physical", 0),
+                    "has_dest": 1,
+                    "imm": push_data.get("imm", 0),
+                    "ready": 0,
+                    "is_branch": push_data.get("is_branch", 0),
+                    "is_alu": 0,
+                    "predict_branch": push_data.get("predict_branch", 0),
+                    "actual_branch": 0,
+                    "is_jump": push_data.get("is_jump", 0),
+                    "is_jalr": push_data.get("is_jalr", 0),
+                    "is_terminator": push_data.get("is_terminator", 0),
+                    "has_dest": 1, # Simplified
+                }
+                queue_storage[tail] = entry
+                tail = (tail + 1) % depth
 
-        # Apply Retire (Pop)
-        if retire:
-            head = (head + 1) % depth
+            # Apply Pop
+            if retire:
+                head = (head + 1) % depth
 
-        # Update Count
-        if push_data and not retire:
-            count += 1
-        elif retire and not push_data:
-            count -= 1
+            # Update Count
+            if push_data is not None and not retire:
+                count += 1
+            elif retire and push_data is None:
+                count -= 1
+            
+    print("All checks passed!")
 
     print("All checks passed!")
 

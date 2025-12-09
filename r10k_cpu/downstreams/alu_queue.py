@@ -26,8 +26,7 @@ class ALUQueue(Downstream):
         self.queue = CircularQueue(ALUQueueEntryType, depth)
     
     @downstream.combinational
-    def build(self, push_enable: Value, push_data: ALUQueuePushEntry, pop_enable: Value, active_list_idx: Value):
-        # self.queue.operate(pop_enable=pop_enable, push_enable=push_enable, push_data=push_data)
+    def build(self, push_enable: Value, push_data: ALUQueuePushEntry, pop_enable: Value, active_list_idx: Value, flush: Value):
         entry = ALUQueueEntryType.bundle(
             valid=push_enable.optional(Bits(1)(0)),
             active_list_idx=active_list_idx,
@@ -48,7 +47,7 @@ class ALUQueue(Downstream):
         push_valid = push_enable.optional(Bits(1)(0))
         pop_enable = pop_enable.optional(Bits(1)(0))
 
-        self.queue.operate(push_enable=push_valid, push_data=entry, pop_enable=pop_enable)
+        self.queue.operate(push_enable=push_valid, push_data=entry, pop_enable=pop_enable, clear=flush.optional(Bits(1)(0)))
 
     def select_first_ready(self, register_ready: Array) -> CircularQueueSelection:
         def selector(value: Value, _) -> Value:

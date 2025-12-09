@@ -17,6 +17,7 @@ class Step:
     pop: bool = False
     reg_ready: Optional[List[int]] = None
     issue_idx: Optional[int] = None
+    flush: bool = False
 
 
 DEPTH = 4
@@ -38,6 +39,10 @@ STEPS = [
     Step(13, reg_ready=[1, 2], issue_idx=1), # Issue A.
     Step(14, reg_ready=[1, 2]), # A issued. B not ready. Expect select None.
     Step(15, reg_ready=[1, 2, 3, 4]), # Make B ready. Expect select B (idx 2).
+    Step(16, flush=True),
+    Step(17, push={"rs1": 1, "rs2": 2, "rd": 30, "alu_op": 1, "imm": 0, "active_idx": 30, "pc": 0x3000, "op1_from": 0, "op2_from": 0}),
+    Step(18, flush=True, push={"rs1": 1, "rs2": 2, "rd": 31, "alu_op": 1, "imm": 0, "active_idx": 31, "pc": 0x3004, "op1_from": 0, "op2_from": 0}),
+    Step(19),
 ]
 
 
@@ -71,6 +76,7 @@ class Driver(Module):
         push_branch_flip = Bits(1)(0)
         active_idx = Bits(5)(0)
         push_pc = Bits(32)(0)
+        flush_en = Bits(1)(0)
 
         for step in STEPS:
             cond = cycle_val == UInt(32)(step.cycle)
@@ -92,6 +98,9 @@ class Driver(Module):
             if step.pop:
                 pop_en = cond.select(Bits(1)(1), pop_en)
 
+            if step.flush:
+                flush_en = cond.select(Bits(1)(1), flush_en)
+
         push_entry = ALUQueuePushEntry(
             rs1_physical=push_rs1,
             rs2_physical=push_rs2,
@@ -100,13 +109,13 @@ class Driver(Module):
             imm=push_imm,
             operant1_from=push_op1_from,
             operant2_from=push_op2_from,
+            PC=push_pc,
             is_branch=push_is_branch,
             is_jalr=push_is_jalr,
             branch_flip=push_branch_flip,
-            PC=push_pc,
         )
 
-        self.queue.build(push_en, push_entry, pop_en, active_idx)
+        self.queue.build(push_en, push_entry, pop_en, active_idx, flush_en)
 
         # Issue logic
         issue_idx_val = Bits(self.queue.queue.addr_bits)(0)
@@ -334,34 +343,39 @@ def check(raw: str):
             assert log_entry["sel_idx"] == expected_sel_idx, f"Cycle {cycle}: expected sel_idx {expected_sel_idx}, got {log_entry['sel_idx']}"
 
         if step:
-            if step.push:
-                queue_storage[tail] = {
-                    "valid": 1,
-                    "active_idx": step.push["active_idx"],
-                    "alu_idx": tail + 1, # alu_idx is 1-based? In build: (tail + 1)
-                    "rs1": step.push["rs1"],
-                    "rs2": step.push["rs2"],
-                    "rd": step.push["rd"],
-                    "op": step.push["alu_op"],
-                    "imm": step.push["imm"],
-                    "op1_from": step.push.get("op1_from", 0),
-                    "op2_from": step.push.get("op2_from", 1),
-                    "is_branch": step.push.get("is_branch", 0),
-                    "is_jalr": step.push.get("is_jalr", 0),
-                    "branch_flip": step.push.get("branch_flip", 0),
-                    "pc": step.push["pc"],
-                    "issued": 0,
-                }
-                tail = (tail + 1) % DEPTH
-                count += 1
+            if step.flush:
+                head = 0
+                tail = 0
+                count = 0
+            else:
+                if step.push:
+                    queue_storage[tail] = {
+                        "valid": 1,
+                        "active_idx": step.push["active_idx"],
+                        "alu_idx": tail + 1, # alu_idx is 1-based? In build: (tail + 1)
+                        "rs1": step.push["rs1"],
+                        "rs2": step.push["rs2"],
+                        "rd": step.push["rd"],
+                        "op": step.push["alu_op"],
+                        "imm": step.push["imm"],
+                        "op1_from": step.push.get("op1_from", 0),
+                        "op2_from": step.push.get("op2_from", 1),
+                        "is_branch": step.push.get("is_branch", 0),
+                        "is_jalr": step.push.get("is_jalr", 0),
+                        "branch_flip": step.push.get("branch_flip", 0),
+                        "pc": step.push["pc"],
+                        "issued": 0,
+                    }
+                    tail = (tail + 1) % DEPTH
+                    count += 1
 
-            if step.pop:
-                # queue_storage[head]["valid"] = 0
-                head = (head + 1) % DEPTH
-                count -= 1
-            
-            if step.issue_idx is not None:
-                queue_storage[step.issue_idx]["issued"] = 1
+                if step.pop:
+                    # queue_storage[head]["valid"] = 0
+                    head = (head + 1) % DEPTH
+                    count -= 1
+                
+                if step.issue_idx is not None:
+                    queue_storage[step.issue_idx]["issued"] = 1
 
     # Final sanity: queue should be empty after final pop
     # assert count == 0, "Queue should be empty after final operations" # Count might not be 0 in my new test case

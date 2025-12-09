@@ -187,6 +187,7 @@ def build_cpu(
         active_list_idx = active_list.build(
             pop_enable=pop_instruction,
             push_inst=active_list_entry,
+            flush=flush_recover,
         )
 
         alu_queue.build(
@@ -194,6 +195,7 @@ def build_cpu(
             push_enable=alu_push_enable,
             push_data=alu_queue_entry,
             active_list_idx=active_list_idx,
+            flush=flush_recover,
         )
 
         lsq.build(
@@ -201,6 +203,7 @@ def build_cpu(
             push_enable=lsq_push_enable,
             push_data=lsq_entry,
             active_list_idx=active_list_idx,
+            flush=flush_recover,
             store_buffer=store_buffer,
         )
 
