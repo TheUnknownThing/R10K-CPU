@@ -189,7 +189,7 @@ TEST_CASES = [
     InstructionTestCase(
         "JALR",
         0x02A100E7,
-        {'has_rd': 1, 'has_rs1': 1, 'has_rs2': 0, 'imm': 42, 'alu_op': 0, 'operant1_from': 3, 'operant2_from': 4, 'is_load': 0, 'is_store': 0, 'mem_op': 0, 'is_branch': 0, 'branch_flip': 0, 'is_terminator': 0, 'is_jump': 1, 'is_jalr': 1, 'is_alu': 1}
+        {'has_rd': 1, 'has_rs1': 1, 'has_rs2': 0, 'imm': 42, 'alu_op': 0, 'operant1_from': 0, 'operant2_from': 2, 'is_load': 0, 'is_store': 0, 'mem_op': 0, 'is_branch': 0, 'branch_flip': 0, 'is_terminator': 0, 'is_jump': 1, 'is_jalr': 1, 'is_alu': 1}
     ),
     InstructionTestCase(
         "LUI",

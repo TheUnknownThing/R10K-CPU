@@ -62,14 +62,25 @@ class ActiveList(Downstream):
 
         return self.queue.get_tail()
 
-    def set_ready(self, index: Value, actual_branch: Optional[Value] = None) -> None:
+    def set_ready(
+        self,
+        index: Value,
+        actual_branch: Optional[Value] = None,
+        new_imm: Optional[Value] = None,
+        new_imm_enable: Optional[Value] = None,
+    ) -> None:
         bundle = self.queue[index]
+        imm_value = bundle.imm
+        if new_imm is not None:
+            imm_enable = new_imm_enable if new_imm_enable is not None else Bits(1)(0)
+            imm_value = imm_enable.select(new_imm, bundle.imm)
         new_bundle = replace_bundle(
             bundle,
             ready=Bits(1)(1),
             actual_branch=(
                 actual_branch if actual_branch is not None else bundle.actual_branch
             ),
+            imm=imm_value,
         )
         self.queue[index] = new_bundle
 

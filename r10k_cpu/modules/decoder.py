@@ -82,6 +82,7 @@ class Decoder(Module):
             operant2_from=args.operant2_from,
             PC=PC,
             is_branch=args.is_branch,
+            is_jalr=args.is_jalr,
             branch_flip=args.branch_flip,
         )
 

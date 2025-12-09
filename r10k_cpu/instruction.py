@@ -470,8 +470,8 @@ class Instructions(Enum):
         opcode=0b1100111,
         funct3=0x0,
         alu_op=RV32I_ALU_Code.ADD,
-        operant1_from=OperantFrom.PC,
-        operant2_from=OperantFrom.LITERAL_FOUR,
+        operant1_from=OperantFrom.RS1,
+        operant2_from=OperantFrom.IMM,
         is_jalr=True,
     )
 

@@ -15,6 +15,7 @@ class ALUQueuePushEntry:
     operant2_from: Value
     PC: Value
     is_branch: Value
+    is_jalr: Value
     branch_flip: Value
 
 class ALUQueue(Downstream):
@@ -40,6 +41,7 @@ class ALUQueue(Downstream):
             operant2_from=push_data.operant2_from.optional(Bits(OPERANT_FROM_LEN)(0)),
             PC=push_data.PC.optional(Bits(32)(0)),
             is_branch=push_data.is_branch.optional(Bits(1)(0)),
+            is_jalr=push_data.is_jalr.optional(Bits(1)(0)),
             branch_flip=push_data.branch_flip.optional(Bits(1)(0)),
             issued=Bits(1)(0),
         )

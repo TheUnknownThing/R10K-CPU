@@ -56,13 +56,19 @@ class ALU(Module):
         )
 
         result_value = op_select.select1hot(*results)
+        pc_plus_four = (instr.PC.bitcast(Int(32)) + Int(32)(4)).bitcast(Bits(32))
+        jalr_target = (
+            physical_register_file[instr.rs1_physical].bitcast(Int(32))
+            + instr.imm.bitcast(Int(32))
+        ).bitcast(Bits(32))
+        rd_value = instr.is_jalr.select(pc_plus_four, result_value)
 
         rd_zero = Bits(6)(0)
         rd_has_dest = instr.rd_physical != rd_zero
         write_valid = instr.valid & rd_has_dest
 
         with Condition(write_valid):
-            physical_register_file[instr.rd_physical] = result_value
+            physical_register_file[instr.rd_physical] = rd_value
             register_ready[instr.rd_physical] = Bits(1)(1)
 
         non_zero = result_value != Bits(32)(0)
@@ -73,7 +79,12 @@ class ALU(Module):
         with Condition(instr.valid):
             # We always pass actual_branch here, but it only matters when is_branch is true
             active_list_index = instr.active_list_idx
-            active_list.set_ready(index=active_list_index, actual_branch=branch_taken)
+            active_list.set_ready(
+                index=active_list_index,
+                actual_branch=branch_taken,
+                new_imm=jalr_target,
+                new_imm_enable=instr.is_jalr,
+            )
 
 
     @staticmethod

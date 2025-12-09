@@ -67,6 +67,7 @@ class Driver(Module):
         push_op1_from = Bits(3)(0)
         push_op2_from = Bits(3)(0)
         push_is_branch = Bits(1)(0)
+        push_is_jalr = Bits(1)(0)
         push_branch_flip = Bits(1)(0)
         active_idx = Bits(5)(0)
         push_pc = Bits(32)(0)
@@ -83,6 +84,7 @@ class Driver(Module):
                 push_op1_from = cond.select(Bits(3)(step.push.get("op1_from", 0)), push_op1_from)
                 push_op2_from = cond.select(Bits(3)(step.push.get("op2_from", 1)), push_op2_from)
                 push_is_branch = cond.select(Bits(1)(step.push.get("is_branch", 0)), push_is_branch)
+                push_is_jalr = cond.select(Bits(1)(step.push.get("is_jalr", 0)), push_is_jalr)
                 push_branch_flip = cond.select(Bits(1)(step.push.get("branch_flip", 0)), push_branch_flip)
                 active_idx = cond.select(Bits(5)(step.push["active_idx"]), active_idx)
                 push_pc = cond.select(Bits(32)(step.push["pc"]), push_pc)
@@ -99,6 +101,7 @@ class Driver(Module):
             operant1_from=push_op1_from,
             operant2_from=push_op2_from,
             is_branch=push_is_branch,
+            is_jalr=push_is_jalr,
             branch_flip=push_branch_flip,
             PC=push_pc,
         )
@@ -165,7 +168,7 @@ class Driver(Module):
 
         for i in range(self.depth):
             entry = self.queue.queue._dtype.view(self.queue.queue[i])
-            log_str += f"E{i}:{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}}; "
+            log_str += f"E{i}:{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}},{{}}; "
             args.extend(
                 [
                     entry.valid,
@@ -179,6 +182,7 @@ class Driver(Module):
                     entry.operant1_from,
                     entry.operant2_from,
                     entry.is_branch,
+                    entry.is_jalr,
                     entry.branch_flip,
                     entry.PC,
                     entry.issued,
@@ -200,7 +204,7 @@ def parse_line(line: str) -> Optional[Dict[str, Any]]:
 
     entry_block = base_match.group(14)
     entries: Dict[int, Dict[str, int]] = {}
-    for match in re.finditer(r"E(\d+):([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+);", entry_block):
+    for match in re.finditer(r"E(\d+):([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+);", entry_block):
         idx = int(match.group(1))
         entries[idx] = {
             "valid": int(match.group(2)),
@@ -214,9 +218,10 @@ def parse_line(line: str) -> Optional[Dict[str, Any]]:
             "op1_from": int(match.group(10)),
             "op2_from": int(match.group(11)),
             "is_branch": int(match.group(12)),
-            "branch_flip": int(match.group(13)),
-            "pc": int(match.group(14)),
-            "issued": int(match.group(15)),
+            "is_jalr": int(match.group(13)),
+            "branch_flip": int(match.group(14)),
+            "pc": int(match.group(15)),
+            "issued": int(match.group(16)),
         }
 
     return {
@@ -261,6 +266,7 @@ def check(raw: str):
             "op1_from": 0,
             "op2_from": 0,
             "is_branch": 0,
+            "is_jalr": 0,
             "branch_flip": 0,
             "pc": 0,
             "issued": 0,
@@ -341,6 +347,7 @@ def check(raw: str):
                     "op1_from": step.push.get("op1_from", 0),
                     "op2_from": step.push.get("op2_from", 1),
                     "is_branch": step.push.get("is_branch", 0),
+                    "is_jalr": step.push.get("is_jalr", 0),
                     "branch_flip": step.push.get("branch_flip", 0),
                     "pc": step.push["pc"],
                     "issued": 0,
