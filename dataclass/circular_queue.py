@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 from assassyn.frontend import *
 from assassyn.ir.dtype import RecordValue
@@ -80,8 +80,11 @@ class CircularQueue:
         push_enable: Value,
         push_data: Value | RecordValue,
         pop_enable: Value,
+        clear: Optional[Value] = None,
     ) -> ArrayRead:
         """Drive the queue for a single cycle and expose its handshake signals."""
+
+        clear_value = Bits(1)(0) if clear is None else clear
 
         empty = self.is_empty()
         full = self.is_full()
@@ -91,25 +94,30 @@ class CircularQueue:
 
         pop_data = self._storage[self._head[0]]
 
-        with Condition(push_enable):
+        with Condition(push_enable & ~clear_value):
             self._storage[self._tail[0]] = push_data
 
         next_head = self._increment_pointer(self._head[0])
         next_tail = self._increment_pointer(self._tail[0])
 
-        with Condition(pop_enable):
+        with Condition(pop_enable & ~clear_value):
             self._head[0] = next_head
-        with Condition(push_enable):
+        with Condition(push_enable & ~clear_value):
             self._tail[0] = next_tail
 
         count_uint = self._count[0].bitcast(UInt(self.count_bits))
         inc_value = (count_uint + self._one).bitcast(Bits(self.count_bits))
         dec_value = (count_uint - self._one).bitcast(Bits(self.count_bits))
 
-        with Condition(push_enable & ~pop_enable):
+        with Condition(push_enable & ~pop_enable & ~clear_value):
             self._count[0] = inc_value
-        with Condition(pop_enable & ~push_enable):
+        with Condition(pop_enable & ~push_enable & ~clear_value):
             self._count[0] = dec_value
+
+        with Condition(clear_value):
+            self._head[0] = self._zero_addr
+            self._tail[0] = self._zero_addr
+            self._count[0] = self._zero
 
         return pop_data
 
@@ -159,9 +167,6 @@ class CircularQueue:
     def get_tail(self) -> Value:
         return self._tail[0]
     
-    def get_head(self) -> Value:
-        return self._head[0]
-
     def get_head(self) -> Value:
         return self._head[0]
 

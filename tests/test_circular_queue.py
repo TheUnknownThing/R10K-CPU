@@ -15,6 +15,7 @@ class Step:
     pop: bool = False
     modify: Optional[Tuple[int, int]] = None  # (index, value)
     search: Optional[int] = None
+    clear: bool = False
 
 
 STEPS = [
@@ -52,6 +53,14 @@ STEPS = [
     Step(30, pop=True),
     Step(31, pop=True),  # Should be empty now
     Step(32),  # Check empty
+    Step(33, push=200),
+    Step(34, push=201),
+    Step(35, push=202),
+    Step(36, clear=True),
+    Step(37, push=300),
+    Step(38),
+    Step(39, push=400, clear=True),
+    Step(40),
 ]
 
 
@@ -76,6 +85,7 @@ class Driver(Module):
         push_data = UInt(10)(0)
         pop_enable = Bits(1)(0)
         search_target = UInt(10)(0)
+        clear_enable = Bits(1)(0)
 
         for step in STEPS:
             cond = cycle_val == UInt(32)(step.cycle)
@@ -95,7 +105,10 @@ class Driver(Module):
             if step.search is not None:
                 search_target = cond.select(UInt(10)(step.search), search_target)
 
-        pop_data = self.queue.operate(push_enable=push_enable, push_data=push_data, pop_enable=pop_enable)
+            if step.clear:
+                clear_enable = cond.select(Bits(1)(1), clear_enable)
+
+        pop_data = self.queue.operate(push_enable=push_enable, push_data=push_data, pop_enable=pop_enable, clear=clear_enable)
         selection = self.queue.choose(lambda x, _: x == search_target)
 
         log_strings = (
@@ -200,11 +213,13 @@ def check(raw: str):
         push_val = None
         pop_en = False
         modify_op = None
+        clear_op = False
 
         if step:
             push_val = step.push
             pop_en = step.pop
             modify_op = step.modify
+            clear_op = step.clear
 
             # Check Search
             if step.search is not None:
@@ -250,21 +265,26 @@ def check(raw: str):
             idx, val = modify_op
             queue_storage[idx] = val
 
-        # Apply Push (RegArray write happens at end of cycle)
-        if push_val is not None:
-            queue_storage[tail] = push_val
-            tail = (tail + 1) % 10
+        if clear_op:
+            head = 0
+            tail = 0
+            count = 0
+        else:
+            # Apply Push (RegArray write happens at end of cycle)
+            if push_val is not None:
+                queue_storage[tail] = push_val
+                tail = (tail + 1) % 10
 
-        # Apply Pop (Head update happens at end of cycle)
-        if pop_en:
-            head = (head + 1) % 10
+            # Apply Pop (Head update happens at end of cycle)
+            if pop_en:
+                head = (head + 1) % 10
 
-        # Update Count
-        if push_val is not None and not pop_en:
-            count += 1
-        elif pop_en and push_val is None:
-            count -= 1
-        # If both push and pop, count remains same
+            # Update Count
+            if push_val is not None and not pop_en:
+                count += 1
+            elif pop_en and push_val is None:
+                count -= 1
+            # If both push and pop, count remains same
 
     print("All checks passed!")
 
