@@ -2,7 +2,7 @@ from assassyn.frontend import *
 from dataclass.circular_queue import CircularQueue
 from r10k_cpu.common import ROBEntryType
 from r10k_cpu.downstreams.fetcher_impl import FetcherFlushEntry
-from r10k_cpu.downstreams.register_ready import RegisterReady
+from r10k_cpu.downstreams.map_table import MapTable
 
 
 class Commit(Module):
@@ -16,14 +16,13 @@ class Commit(Module):
     def build(
         self,
         active_list_queue: CircularQueue,
-        register_ready: RegisterReady,
+        map_table: MapTable,
+        register_file: Array,
     ):
         """Graduate instructions, free physical registers, and surface map-table updates."""
 
         front_entry = ROBEntryType.view(active_list_queue.front())
         retire_with_dest = front_entry.ready & front_entry.has_dest
-        with Condition(retire_with_dest):
-            register_ready.mark_not_ready(front_entry.dest_old_physical, enable=retire_with_dest)
 
         is_branch = front_entry.is_branch
         mispredict = is_branch & (
@@ -55,6 +54,21 @@ class Commit(Module):
 
         need_push_freelist = front_entry.ready & front_entry.has_dest
         need_pop_activelist = front_entry.ready
+
+        with Condition(need_pop_activelist & ~flush_recover):
+            log_parts = ["PC=0x{:08X}"]
+            for i in range(32):
+                log_parts.append(f"x{i}=0x{{:08X}}")
+            log_format = " ".join(log_parts)
+            new_regs = [
+                register_file[
+                    (commit_write_enable & (commit_logical == Bits(5)(i))).select(
+                        commit_physical, map_table.read_commit(Bits(5)(i))
+                    )
+                ]
+                for i in range(32)
+            ]
+            log(log_format, front_entry.pc, *new_regs)
 
         return (
             need_push_freelist,

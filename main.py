@@ -92,7 +92,8 @@ def build_cpu(
             out_branch,
         ) = commit.build(
             active_list_queue=active_list.queue,
-            register_ready=register_ready,
+            map_table=map_table,
+            register_file=physical_register_file,
         )
 
         alu.build(
@@ -217,7 +218,7 @@ def build_cpu(
         register_ready.build(flush_recover=flush_recover)
 
     conf = config(
-        verilog=utils.has_verilator(),  # pyright: ignore[reportArgumentType]
+        verilog=False,  # pyright: ignore[reportArgumentType]
         verbose=False,
         sim_threshold=sim_threshold,
         idle_threshold=idle_threshold,
@@ -226,16 +227,13 @@ def build_cpu(
     )
 
     simulator_path, verilog_path = elaborate(sys, **conf)
-    print("Building simulator binary...")
-    simulator_binary = utils.build_simulator(simulator_path)
-    print(f"Simulator binary built: {simulator_binary}")
-    return sys, simulator_binary, verilog_path
+    return sys, simulator_path, verilog_path
 
 
 if __name__ == "__main__":
-    sys, simulator_binary, verilog_path = build_cpu(
+    sys, simulator_path, verilog_path = build_cpu(
         sram_file="asms/empty/empty.hex",
     )
-    # sim_output = utils.run_simulator(binary_path=simulator_binary)
-    # print("Simulation output:\n", sim_output)
-    utils.run_verilator(verilog_path)
+    sim_output = utils.run_simulator(simulator_path)
+    print("Simulation output:\n", sim_output)
+    # utils.run_verilator(verilog_path)
