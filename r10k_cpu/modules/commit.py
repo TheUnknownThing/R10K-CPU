@@ -53,12 +53,14 @@ class Commit(Module):
 
         out_branch = front_entry.ready & is_branch
 
-        need_pop = front_entry.ready & front_entry.has_dest
+        need_push_freelist = front_entry.ready & front_entry.has_dest
+        need_pop_activelist = front_entry.ready
 
         return (
-            need_pop,
-            need_pop & front_entry.is_alu, # ALU pop enable
-            need_pop & ~front_entry.is_alu, # LSQ pop enable
+            need_push_freelist,
+            need_pop_activelist,
+            front_entry.ready & front_entry.is_alu, # ALU pop enable
+            front_entry.ready & ~front_entry.is_alu, # LSQ pop enable
             retire_with_dest.select(front_entry.dest_old_physical, Bits(6)(0)),
             commit_write_enable,
             commit_logical,

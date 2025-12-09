@@ -79,7 +79,8 @@ def build_cpu(
         driver.build(fetcher=fetcher, commit=commit, scheduler=scheduler)
 
         (
-            pop_instruction,
+            push_freelist,
+            pop_activelist,
             alu_pop,
             mem_pop,
             old_physical,
@@ -178,7 +179,7 @@ def build_cpu(
         )
 
         free_list.build(
-            push_enable=pop_instruction,
+            push_enable=push_freelist,
             push_data=old_physical,
             pop_enable=free_list_pop_enable,
             make_snapshot=into_speculating,
@@ -186,7 +187,7 @@ def build_cpu(
         )
 
         active_list_idx = active_list.build(
-            pop_enable=pop_instruction,
+            pop_enable=pop_activelist,
             push_inst=active_list_entry,
             flush=flush_recover,
         )
