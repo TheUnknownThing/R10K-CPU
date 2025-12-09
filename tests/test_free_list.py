@@ -3,6 +3,7 @@ from typing import Any, Optional
 from assassyn.frontend import *
 from assassyn.backend import elaborate
 from assassyn.utils import run_simulator
+from r10k_cpu.utils import attach_context
 from tests.utils import run_quietly
 from r10k_cpu.downstreams.free_list import FreeList
 import re
@@ -52,8 +53,8 @@ class Driver(Module):
         pop_enable = Bits(1)(0)
         push_enable = Bits(1)(0)
         push_data = Bits(self.free_list.queue._dtype.bits)(0)
-        make_snapshot = Bits(1)(0)
-        flush_recover = Bits(1)(0)
+        make_snapshot = attach_context(Bits(1)(0))
+        flush_recover = attach_context(Bits(1)(0))
 
         for step in self.steps:
             cond = cycle_val == UInt(32)(step.cycle)
