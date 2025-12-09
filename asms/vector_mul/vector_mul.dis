@@ -1,0 +1,98 @@
+
+asms/vector_mul/vector_mul.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00000000 <_start>:
+   0:	00010137          	lui	sp,0x10
+   4:	078000ef          	jal	7c <main>
+   8:	00100073          	ebreak
+   c:	0000006f          	j	c <_start+0xc>
+
+00000010 <multiply>:
+  10:	00050793          	mv	a5,a0
+  14:	04054263          	bltz	a0,58 <multiply+0x48>
+  18:	0205ca63          	bltz	a1,4c <multiply+0x3c>
+  1c:	00000693          	li	a3,0
+  20:	04058463          	beqz	a1,68 <multiply+0x58>
+  24:	00000513          	li	a0,0
+  28:	0015f713          	and	a4,a1,1
+  2c:	4015d593          	sra	a1,a1,0x1
+  30:	00070463          	beqz	a4,38 <multiply+0x28>
+  34:	00f50533          	add	a0,a0,a5
+  38:	00179793          	sll	a5,a5,0x1
+  3c:	fe0596e3          	bnez	a1,28 <multiply+0x18>
+  40:	00068463          	beqz	a3,48 <multiply+0x38>
+  44:	40a00533          	neg	a0,a0
+  48:	00008067          	ret
+  4c:	00100693          	li	a3,1
+  50:	40b005b3          	neg	a1,a1
+  54:	fd1ff06f          	j	24 <multiply+0x14>
+  58:	40a007b3          	neg	a5,a0
+  5c:	0005ca63          	bltz	a1,70 <multiply+0x60>
+  60:	00100693          	li	a3,1
+  64:	fc0590e3          	bnez	a1,24 <multiply+0x14>
+  68:	00000513          	li	a0,0
+  6c:	00008067          	ret
+  70:	00000693          	li	a3,0
+  74:	40b005b3          	neg	a1,a1
+  78:	fadff06f          	j	24 <multiply+0x14>
+
+0000007c <main>:
+  7c:	15c00513          	li	a0,348
+  80:	19050e13          	add	t3,a0,400
+  84:	15c00593          	li	a1,348
+  88:	000e0893          	mv	a7,t3
+  8c:	000e0693          	mv	a3,t3
+  90:	15c00713          	li	a4,348
+  94:	00000793          	li	a5,0
+  98:	00200813          	li	a6,2
+  9c:	06400613          	li	a2,100
+  a0:	00f72023          	sw	a5,0(a4)
+  a4:	0106a023          	sw	a6,0(a3)
+  a8:	00178793          	add	a5,a5,1
+  ac:	00470713          	add	a4,a4,4
+  b0:	00468693          	add	a3,a3,4
+  b4:	fec796e3          	bne	a5,a2,a0 <main+0x24>
+  b8:	32058593          	add	a1,a1,800
+  bc:	00058813          	mv	a6,a1
+  c0:	00052703          	lw	a4,0(a0)
+  c4:	0008a783          	lw	a5,0(a7)
+  c8:	06074263          	bltz	a4,12c <main+0xb0>
+  cc:	0607cc63          	bltz	a5,144 <main+0xc8>
+  d0:	00000313          	li	t1,0
+  d4:	06078463          	beqz	a5,13c <main+0xc0>
+  d8:	00000613          	li	a2,0
+  dc:	0017f693          	and	a3,a5,1
+  e0:	4017d793          	sra	a5,a5,0x1
+  e4:	00068463          	beqz	a3,ec <main+0x70>
+  e8:	00e60633          	add	a2,a2,a4
+  ec:	00171713          	sll	a4,a4,0x1
+  f0:	fe0796e3          	bnez	a5,dc <main+0x60>
+  f4:	00030463          	beqz	t1,fc <main+0x80>
+  f8:	40c00633          	neg	a2,a2
+  fc:	00c82023          	sw	a2,0(a6)
+ 100:	00450513          	add	a0,a0,4
+ 104:	00488893          	add	a7,a7,4
+ 108:	00480813          	add	a6,a6,4
+ 10c:	fbc51ae3          	bne	a0,t3,c0 <main+0x44>
+ 110:	19058713          	add	a4,a1,400
+ 114:	00000513          	li	a0,0
+ 118:	0005a783          	lw	a5,0(a1)
+ 11c:	00458593          	add	a1,a1,4
+ 120:	00f50533          	add	a0,a0,a5
+ 124:	feb71ae3          	bne	a4,a1,118 <main+0x9c>
+ 128:	00008067          	ret
+ 12c:	40e00733          	neg	a4,a4
+ 130:	0207c063          	bltz	a5,150 <main+0xd4>
+ 134:	00100313          	li	t1,1
+ 138:	fa0790e3          	bnez	a5,d8 <main+0x5c>
+ 13c:	00000613          	li	a2,0
+ 140:	fbdff06f          	j	fc <main+0x80>
+ 144:	00100313          	li	t1,1
+ 148:	40f007b3          	neg	a5,a5
+ 14c:	f8dff06f          	j	d8 <main+0x5c>
+ 150:	00000313          	li	t1,0
+ 154:	40f007b3          	neg	a5,a5
+ 158:	f81ff06f          	j	d8 <main+0x5c>

@@ -1,0 +1,138 @@
+
+asms/quick_sort/quick_sort.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00000000 <_start>:
+   0:	00010137          	lui	sp,0x10
+   4:	160000ef          	jal	164 <main>
+   8:	00100073          	ebreak
+   c:	0000006f          	j	c <_start+0xc>
+
+00000010 <swap>:
+  10:	0005a703          	lw	a4,0(a1)
+  14:	00052783          	lw	a5,0(a0)
+  18:	00e52023          	sw	a4,0(a0)
+  1c:	00f5a023          	sw	a5,0(a1)
+  20:	00008067          	ret
+
+00000024 <partition>:
+  24:	00261893          	sll	a7,a2,0x2
+  28:	011508b3          	add	a7,a0,a7
+  2c:	0008ae03          	lw	t3,0(a7)
+  30:	00050313          	mv	t1,a0
+  34:	fff58813          	add	a6,a1,-1
+  38:	04c5dc63          	bge	a1,a2,90 <partition+0x6c>
+  3c:	00259593          	sll	a1,a1,0x2
+  40:	00b507b3          	add	a5,a0,a1
+  44:	0007a683          	lw	a3,0(a5)
+  48:	01c6de63          	bge	a3,t3,64 <partition+0x40>
+  4c:	00180813          	add	a6,a6,1
+  50:	00281713          	sll	a4,a6,0x2
+  54:	00e30733          	add	a4,t1,a4
+  58:	00072603          	lw	a2,0(a4)
+  5c:	00d72023          	sw	a3,0(a4)
+  60:	00c7a023          	sw	a2,0(a5)
+  64:	00478793          	add	a5,a5,4
+  68:	fcf89ee3          	bne	a7,a5,44 <partition+0x20>
+  6c:	00180813          	add	a6,a6,1
+  70:	00080513          	mv	a0,a6
+  74:	00281813          	sll	a6,a6,0x2
+  78:	0008ae03          	lw	t3,0(a7)
+  7c:	01030333          	add	t1,t1,a6
+  80:	00032783          	lw	a5,0(t1)
+  84:	01c32023          	sw	t3,0(t1)
+  88:	00f8a023          	sw	a5,0(a7)
+  8c:	00008067          	ret
+  90:	00058813          	mv	a6,a1
+  94:	00281813          	sll	a6,a6,0x2
+  98:	01030333          	add	t1,t1,a6
+  9c:	00032783          	lw	a5,0(t1)
+  a0:	01c32023          	sw	t3,0(t1)
+  a4:	00058513          	mv	a0,a1
+  a8:	00f8a023          	sw	a5,0(a7)
+  ac:	00008067          	ret
+
+000000b0 <quickSort>:
+  b0:	fe010113          	add	sp,sp,-32 # ffe0 <arr+0xfdf4>
+  b4:	00912a23          	sw	s1,20(sp)
+  b8:	00112e23          	sw	ra,28(sp)
+  bc:	00261493          	sll	s1,a2,0x2
+  c0:	00812c23          	sw	s0,24(sp)
+  c4:	01212823          	sw	s2,16(sp)
+  c8:	01312623          	sw	s3,12(sp)
+  cc:	009504b3          	add	s1,a0,s1
+  d0:	06c5dc63          	bge	a1,a2,148 <quickSort+0x98>
+  d4:	00060993          	mv	s3,a2
+  d8:	00050913          	mv	s2,a0
+  dc:	0004a803          	lw	a6,0(s1)
+  e0:	fff58413          	add	s0,a1,-1
+  e4:	0335dc63          	bge	a1,s3,11c <quickSort+0x6c>
+  e8:	00259793          	sll	a5,a1,0x2
+  ec:	00f907b3          	add	a5,s2,a5
+  f0:	0007a683          	lw	a3,0(a5)
+  f4:	0106de63          	bge	a3,a6,110 <quickSort+0x60>
+  f8:	00140413          	add	s0,s0,1
+  fc:	00241713          	sll	a4,s0,0x2
+ 100:	00e90733          	add	a4,s2,a4
+ 104:	00072883          	lw	a7,0(a4)
+ 108:	00d72023          	sw	a3,0(a4)
+ 10c:	0117a023          	sw	a7,0(a5)
+ 110:	00478793          	add	a5,a5,4
+ 114:	fcf49ee3          	bne	s1,a5,f0 <quickSort+0x40>
+ 118:	0004a803          	lw	a6,0(s1)
+ 11c:	00140793          	add	a5,s0,1
+ 120:	00279793          	sll	a5,a5,0x2
+ 124:	00f907b3          	add	a5,s2,a5
+ 128:	0007a703          	lw	a4,0(a5)
+ 12c:	0107a023          	sw	a6,0(a5)
+ 130:	00040613          	mv	a2,s0
+ 134:	00e4a023          	sw	a4,0(s1)
+ 138:	00090513          	mv	a0,s2
+ 13c:	f75ff0ef          	jal	b0 <quickSort>
+ 140:	00240593          	add	a1,s0,2
+ 144:	f935cce3          	blt	a1,s3,dc <quickSort+0x2c>
+ 148:	01c12083          	lw	ra,28(sp)
+ 14c:	01812403          	lw	s0,24(sp)
+ 150:	01412483          	lw	s1,20(sp)
+ 154:	01012903          	lw	s2,16(sp)
+ 158:	00c12983          	lw	s3,12(sp)
+ 15c:	02010113          	add	sp,sp,32
+ 160:	00008067          	ret
+
+00000164 <main>:
+ 164:	ff010113          	add	sp,sp,-16
+ 168:	00812423          	sw	s0,8(sp)
+ 16c:	00912223          	sw	s1,4(sp)
+ 170:	00112623          	sw	ra,12(sp)
+ 174:	1ec00413          	li	s0,492
+ 178:	1ec00493          	li	s1,492
+ 17c:	1ec00713          	li	a4,492
+ 180:	06400793          	li	a5,100
+ 184:	00f72023          	sw	a5,0(a4)
+ 188:	fff78793          	add	a5,a5,-1
+ 18c:	00470713          	add	a4,a4,4
+ 190:	fe079ae3          	bnez	a5,184 <main+0x20>
+ 194:	00000593          	li	a1,0
+ 198:	1ec00513          	li	a0,492
+ 19c:	06300613          	li	a2,99
+ 1a0:	f11ff0ef          	jal	b0 <quickSort>
+ 1a4:	0004a503          	lw	a0,0(s1)
+ 1a8:	00440793          	add	a5,s0,4
+ 1ac:	00100713          	li	a4,1
+ 1b0:	06400593          	li	a1,100
+ 1b4:	00c0006f          	j	1c0 <main+0x5c>
+ 1b8:	00478793          	add	a5,a5,4
+ 1bc:	00b70e63          	beq	a4,a1,1d8 <main+0x74>
+ 1c0:	0007a683          	lw	a3,0(a5)
+ 1c4:	ffc7a603          	lw	a2,-4(a5)
+ 1c8:	00170713          	add	a4,a4,1
+ 1cc:	00d50533          	add	a0,a0,a3
+ 1d0:	fec6d4e3          	bge	a3,a2,1b8 <main+0x54>
+ 1d4:	fff00513          	li	a0,-1
+ 1d8:	00c12083          	lw	ra,12(sp)
+ 1dc:	00812403          	lw	s0,8(sp)
+ 1e0:	00412483          	lw	s1,4(sp)
+ 1e4:	01010113          	add	sp,sp,16
+ 1e8:	00008067          	ret

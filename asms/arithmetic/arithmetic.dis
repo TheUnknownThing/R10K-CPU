@@ -1,0 +1,15 @@
+
+asms/arithmetic/arithmetic.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00000000 <_start>:
+   0:	00010137          	lui	sp,0x10
+   4:	00c000ef          	jal	10 <main>
+   8:	00100073          	ebreak
+   c:	0000006f          	j	c <_start+0xc>
+
+00000010 <main>:
+  10:	02800513          	li	a0,40
+  14:	00008067          	ret

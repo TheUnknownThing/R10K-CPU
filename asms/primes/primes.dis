@@ -1,0 +1,51 @@
+
+asms/primes/primes.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00000000 <_start>:
+   0:	00010137          	lui	sp,0x10
+   4:	00c000ef          	jal	10 <main>
+   8:	00100073          	ebreak
+   c:	0000006f          	j	c <_start+0xc>
+
+00000010 <main>:
+  10:	0a800793          	li	a5,168
+  14:	00100713          	li	a4,1
+  18:	00e7a023          	sw	a4,0(a5)
+  1c:	00e7a223          	sw	a4,4(a5)
+  20:	0b000593          	li	a1,176
+  24:	0b800813          	li	a6,184
+  28:	00200613          	li	a2,2
+  2c:	00100313          	li	t1,1
+  30:	3e700893          	li	a7,999
+  34:	02000e13          	li	t3,32
+  38:	0140006f          	j	4c <main+0x3c>
+  3c:	00160613          	add	a2,a2,1
+  40:	00458593          	add	a1,a1,4
+  44:	00880813          	add	a6,a6,8
+  48:	03c60c63          	beq	a2,t3,80 <main+0x70>
+  4c:	0005a703          	lw	a4,0(a1)
+  50:	fe0716e3          	bnez	a4,3c <main+0x2c>
+  54:	00161693          	sll	a3,a2,0x1
+  58:	00261513          	sll	a0,a2,0x2
+  5c:	00080713          	mv	a4,a6
+  60:	00672023          	sw	t1,0(a4)
+  64:	00c686b3          	add	a3,a3,a2
+  68:	00a70733          	add	a4,a4,a0
+  6c:	fed8dae3          	bge	a7,a3,60 <main+0x50>
+  70:	00160613          	add	a2,a2,1
+  74:	00458593          	add	a1,a1,4
+  78:	00880813          	add	a6,a6,8
+  7c:	fdc618e3          	bne	a2,t3,4c <main+0x3c>
+  80:	000016b7          	lui	a3,0x1
+  84:	fa068693          	add	a3,a3,-96 # fa0 <is_prime+0xef8>
+  88:	00d786b3          	add	a3,a5,a3
+  8c:	00000513          	li	a0,0
+  90:	0007a703          	lw	a4,0(a5)
+  94:	00478793          	add	a5,a5,4
+  98:	00173713          	seqz	a4,a4
+  9c:	00e50533          	add	a0,a0,a4
+  a0:	fed798e3          	bne	a5,a3,90 <main+0x80>
+  a4:	00008067          	ret
