@@ -8,6 +8,7 @@ from assassyn.utils import run_simulator
 
 from tests.utils import run_quietly
 from r10k_cpu.downstreams.lsq import LSQ, LSQPushEntry
+from r10k_cpu.common import LSQEntryType
 
 
 @dataclass
@@ -98,6 +99,7 @@ class Driver(Module):
         self.queue = LSQ(depth)
         self.depth = depth
         self.cycle = RegArray(UInt(32), 1, initializer=[0])
+        self.store_buffer = RegArray(LSQEntryType, 1, initializer=[0])
 
     @module.combinational
     def build(self):
@@ -141,7 +143,7 @@ class Driver(Module):
             imm=push_imm,
         )
 
-        self.queue.build(push_en, push_entry, pop_en, active_idx)
+        self.queue.build(push_en, push_entry, pop_en, active_idx, self.store_buffer)
 
         # Issue logic
         issue_idx_val = Bits(self.queue.queue.addr_bits)(0)
@@ -179,6 +181,9 @@ class Driver(Module):
                             cycle_ready = cycle_ready | (index == Bits(6)(idx))
                     is_ready = cond.select(cycle_ready, is_ready)
                 return is_ready
+
+            def read(self, index):
+                return self.__getitem__(index)
 
         mock_ready = MockRegisterReady(ready_indices_map, cycle_val)
         selection = self.queue.select_first_ready(mock_ready)
