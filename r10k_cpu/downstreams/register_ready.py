@@ -59,7 +59,7 @@ class RegisterReady(Downstream):
     def read(self, physical_idx: Value) -> Value:
         idx  = physical_idx.bitcast(UInt(self.index_bits))
         bits = self._ready_bits[0].bitcast(UInt(self.num_registers))
-        return ((bits >> idx) & UInt(1)(1)).bitcast(Bits(1))
+        return ((bits >> idx)[0:0] & UInt(1)(1)).bitcast(Bits(1))
 
     def state(self) -> Value:
         return self._ready_bits[0]
