@@ -37,6 +37,11 @@ class FreeList(Downstream):
         make_snapshot: Value,
         flush_recover: Value,
     ):
+        make_snapshot = make_snapshot.optional(Bits(1)(0))
+        flush_recover = flush_recover.optional(Bits(1)(0))
+        pop_enable = pop_enable.optional(Bits(1)(0))
+        push_enable = push_enable.optional(Bits(1)(0))
+        
         with Condition(make_snapshot):
             self.snapshot_head[0] = self.queue.get_head()
 

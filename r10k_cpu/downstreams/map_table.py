@@ -58,13 +58,13 @@ class MapTable(Downstream):
         commit_write: MapTableWriteEntry,
         flush_to_commit: Value,
     ) -> None:
-        rename_en = rename_write.enable
-        rename_logical = rename_write.logical_idx
-        rename_physical = rename_write.physical_value
+        rename_en = rename_write.enable.optional(Bits(1)(0))
+        rename_logical = rename_write.logical_idx.optional(Bits(self._index_bits)(0))
+        rename_physical = rename_write.physical_value.optional(Bits(self.physical_bits)(0))
 
-        commit_en = commit_write.enable
-        commit_logical = commit_write.logical_idx
-        commit_physical = commit_write.physical_value
+        commit_en = commit_write.enable.optional(Bits(1)(0))
+        commit_logical = commit_write.logical_idx.optional(Bits(self._index_bits)(0))
+        commit_physical = commit_write.physical_value.optional(Bits(self.physical_bits)(0))
 
         spec_bits = self._spec_table[0].bitcast(UInt(self._storage_bits))
         commit_bits = self._commit_table[0].bitcast(UInt(self._storage_bits))
