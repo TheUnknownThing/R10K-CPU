@@ -32,7 +32,6 @@ class Scheduler(Module):
 
         with Condition(buffer_instr.valid):
             # You can transform it to RecordValue and check its valid field
-            lsu.async_called(instr=buffer_instr)
             store_buffer[0] = LSQEntryType.bundle(
                 valid=Bits(1)(0),
                 active_list_idx=Bits(5)(0),
@@ -51,7 +50,8 @@ class Scheduler(Module):
             alu_selection=alu_selection,
             alu=alu,
             alu_queue=alu_queue,
-            is_store_buffer_valid=buffer_instr.valid,
+            buffer_valid=buffer_instr.valid,
+            buffer_instr=buffer_instr,
             lsu=lsu,
             lsq_selection=lsq_selection,
             lsq=lsq,
