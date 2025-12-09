@@ -53,11 +53,12 @@ class Commit(Module):
 
         out_branch = front_entry.ready & is_branch
 
-        # front_entry ready indicates whether to pop instruction
+        need_pop = front_entry.ready & front_entry.has_dest
+
         return (
-            front_entry.ready,
-            front_entry.ready & front_entry.is_alu,
-            front_entry.ready & ~front_entry.is_alu,
+            need_pop,
+            need_pop & front_entry.is_alu, # ALU pop enable
+            need_pop & ~front_entry.is_alu, # LSQ pop enable
             retire_with_dest.select(front_entry.dest_old_physical, Bits(6)(0)),
             commit_write_enable,
             commit_logical,
