@@ -37,8 +37,8 @@ class FetcherImpl(Downstream):
         offset = (is_branch & predict_branch).select(branch_offset, Bits(32)(4))
 
         new_PC = flush_enable.select(
-            flush_PC + flush_offset,
-            PC_addr + offset,
+            (flush_PC.bitcast(UInt(32)) + flush_offset.bitcast(UInt(32))).bitcast(Bits(32)),
+            (PC_addr.bitcast(UInt(32)) + offset.bitcast(UInt(32))).bitcast(Bits(32)),
         )
 
         new_PC = (flush_enable | (~new_stalled & decode_success)).select(

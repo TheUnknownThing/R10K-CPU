@@ -68,10 +68,10 @@ def build_cpu(
         # This buffer stores store instruction that have been committed but not yet executed.
         store_buffer = RegArray(LSQEntryType, 1, initializer=[0])
 
-        dcache = SRAM(width=32, depth=0x100000, init_file=sram_file)
+        dcache = SRAM(width=32, depth=0x100000000, init_file=sram_file)
         dcache.name = "memory_data"
 
-        icache = SRAM(width=32, depth=0x100000, init_file=sram_file)
+        icache = SRAM(width=32, depth=0x100000000, init_file=sram_file)
         icache.name = "memory_instruction"
 
         PC_reg, PC_addr = fetcher.build()
@@ -235,6 +235,6 @@ if __name__ == "__main__":
     sys, simulator_binary, verilog_path = build_cpu(
         sram_file="asms/empty/empty.hex",
     )
-    sim_output = utils.run_simulator(binary_path=simulator_binary)
-    print("Simulation output:\n", sim_output)
+    # sim_output = utils.run_simulator(binary_path=simulator_binary)
+    # print("Simulation output:\n", sim_output)
     utils.run_verilator(verilog_path)
