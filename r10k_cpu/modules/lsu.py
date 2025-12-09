@@ -17,7 +17,7 @@ class LSU(Module):
         load_active = (instr.is_load & instr.valid).bitcast(Bits(1))
         need_update_active_list = load_active # store instruction always has ready bit.
 
-        addr = (physical_register_file[instr.rs1_physical].bitcast(Int(32)) + instr.imm.bitcast(Int(32))).bitcast(Bits(32))
+        addr = (physical_register_file[instr.rs1_physical].bitcast(Int(32)) + instr.imm.bitcast(Int(32))).bitcast(Bits(32))[2:31].zext(Bits(32))
         val = store_active.select(physical_register_file[instr.rs2_physical], Bits(32)(0))
 
         # YEAH... Assassyn do not support writing a half word or a byte yet...

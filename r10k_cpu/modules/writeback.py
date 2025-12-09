@@ -42,7 +42,7 @@ class WriteBack(Module):
     @staticmethod
     def process_memory_data(op_type: Value, data: Value, address: Value) -> Value:
         """Process data read from memory based on operation type."""
-        byte_offset = address[0:2].bitcast(UInt(2))
+        byte_offset = address[0:2].zext(UInt(5))
         shift_amt = (byte_offset << UInt(5)(3)).bitcast(Bits(5))
         data_shifted = (data.bitcast(UInt(32)) >> shift_amt).bitcast(Bits(32))
 

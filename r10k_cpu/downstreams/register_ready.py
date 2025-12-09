@@ -35,7 +35,8 @@ class RegisterReady(Downstream):
         )
         self._writes: list[RegisterReadyWrite] = []
 
-        self._all_ready = UInt(num_registers)((1 << num_registers) - 1)
+        # All bits setting to 1 equals to -1.
+        self._all_ready = Int(num_registers)(-1)
 
     def mark_ready(self, physical_idx: Value, enable: Value) -> None:
         self._writes.append(
@@ -77,7 +78,7 @@ class RegisterReady(Downstream):
             idx = write.physical_idx.optional(zero_idx)
             next_ready = self._apply_write(next_ready, en, idx, write.ready_value)
 
-        next_ready = flush_bit.select(self._all_ready, next_ready)
+        next_ready = flush_bit.select(self._all_ready.bitcast(UInt(self.num_registers)), next_ready)
         self._ready_bits[0] = next_ready.bitcast(Bits(self.num_registers))
 
     def _apply_write(
