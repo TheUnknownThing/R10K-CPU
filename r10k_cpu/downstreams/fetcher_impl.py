@@ -38,7 +38,11 @@ class FetcherImpl(Downstream):
 
         new_PC = flush_enable.select(
             flush_PC + flush_offset,
-            PC_addr + decode_success.select(offset, Bits(32)(0)),
+            PC_addr + offset,
+        )
+
+        new_PC = (flush_enable | (~new_stalled & decode_success)).select(
+            new_PC, PC_addr
         )
 
         PC_reg[0] = new_PC
@@ -47,6 +51,8 @@ class FetcherImpl(Downstream):
         icache.build(
             we=Bool(0), re=Bool(1), addr=new_PC[2:31].zext(Bits(32)), wdata=Bits(32)(0)
         )
+
+        log("new_PC: 0x{:08X}", new_PC)
 
         with Condition(~new_stalled):
             decoder.async_called(PC=new_PC)
