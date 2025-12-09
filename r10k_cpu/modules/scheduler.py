@@ -4,6 +4,8 @@ from dataclass.circular_queue import CircularQueueSelection
 from r10k_cpu.downstreams.alu_queue import ALUQueue
 from r10k_cpu.downstreams.lsq import LSQ
 from r10k_cpu.downstreams.register_ready import RegisterReady
+from r10k_cpu.downstreams.scheduler_down import SchedulerDownEntry
+
 
 class Scheduler(Module):
     """Schedules instructions for execution"""
@@ -13,20 +15,23 @@ class Scheduler(Module):
         self.name = "Scheduler"
 
     @module.combinational
-    def build(self, alu_queue: ALUQueue, lsq: LSQ, store_buffer: Array, register_ready: RegisterReady, alu: Module, lsu: Module):
+    def build(
+        self,
+        alu_queue: ALUQueue,
+        lsq: LSQ,
+        store_buffer: Array,
+        register_ready: RegisterReady,
+        alu: Module,
+        lsu: Module,
+    ):
         """Select ready instructions from active list and LSQ for execution."""
         alu_selection = alu_queue.select_first_ready(register_ready=register_ready)
         lsq_selection = lsq.select_first_ready(register_ready=register_ready)
 
-        buffer_instr = store_buffer[0]
-        
-        with Condition(alu_selection.valid):
-            alu_queue.mark_issued(index=alu_selection.index)
-            alu.async_called(instr=alu_selection.data)
-        
-        with Condition(buffer_instr.is_store):
-            # NOTE: why we use is_store here?
-            # Because the `buffer_instr.valid` refers to the buildin method of the ArrayRead
+        buffer_instr = LSQEntryType.view(store_buffer[0])
+
+        with Condition(buffer_instr.valid):
+            # You can transform it to RecordValue and check its valid field
             lsu.async_called(instr=buffer_instr)
             store_buffer[0] = LSQEntryType.bundle(
                 valid=Bits(1)(0),
@@ -41,7 +46,13 @@ class Scheduler(Module):
                 rs2_physical=Bits(6)(0),
                 issued=Bits(1)(0),
             )
-        
-        with Condition(lsq_selection.valid & ~buffer_instr.is_store):
-            lsq.mark_issued(index=lsq_selection.index)
-            lsu.async_called(instr=lsq_selection.data)
+
+        return SchedulerDownEntry(
+            alu_selection=alu_selection,
+            alu=alu,
+            alu_queue=alu_queue,
+            is_store_buffer_valid=buffer_instr.valid,
+            lsu=lsu,
+            lsq_selection=lsq_selection,
+            lsq=lsq,
+        )

@@ -52,7 +52,5 @@ class FetcherImpl(Downstream):
             we=Bool(0), re=Bool(1), addr=new_PC[2:31].zext(Bits(32)), wdata=Bits(32)(0)
         )
 
-        log("new_PC: 0x{:08X}", new_PC)
-
         with Condition(~new_stalled):
             decoder.async_called(PC=new_PC)

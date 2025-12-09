@@ -15,6 +15,7 @@ from r10k_cpu.downstreams.predictor import (
     PredictFeedback,
     Predictor,
 )
+from r10k_cpu.downstreams.scheduler_down import SchedulerDown
 from r10k_cpu.downstreams.speculation_state import SpeculationState
 from r10k_cpu.modules.commit import Commit
 from r10k_cpu.modules.decoder import Decoder
@@ -57,6 +58,7 @@ def build_cpu(
         fetcher_impl = FetcherImpl()
         speculation_state = SpeculationState()
         scheduler = Scheduler()
+        scheduler_down = SchedulerDown()
         predictor: Predictor = AlwaysBranchPredictor()
 
         physical_register_file = RegArray(Bits(32), 64, initializer=[0] * 64)
@@ -104,7 +106,7 @@ def build_cpu(
             wb=writeback,
         )
 
-        scheduler.build(
+        scheduler_down_entry = scheduler.build(
             alu_queue=alu_queue,
             lsq=lsq,
             store_buffer=store_buffer,
@@ -112,6 +114,8 @@ def build_cpu(
             alu=alu,
             lsu=lsu,
         )
+
+        scheduler_down.build(scheduler_down_entry, flush_recover)
 
         writeback.build(
             active_list=active_list,
@@ -211,9 +215,9 @@ def build_cpu(
 
         register_ready.build(flush_recover=flush_recover)
 
-    print(sys)
     conf = config(
         verilog=utils.has_verilator(),  # pyright: ignore[reportArgumentType]
+        verbose=False,
         sim_threshold=sim_threshold,
         idle_threshold=idle_threshold,
         resource_base=resource_base,
