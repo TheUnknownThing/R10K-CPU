@@ -38,9 +38,9 @@ class Commit(Module):
         )
 
         flush_fetcher = front_entry.ready & (mispredict | front_entry.is_jump)
-        flush_PC = front_entry.pc
+        flush_PC = front_entry.is_jalr.select(Bits(32)(0), front_entry.pc)
         flush_offset = front_entry.is_jalr.select(
-            physical_register_file[front_entry.dest_new_physical],
+            front_entry.imm,
             (mispredict & ~front_entry.actual_branch).select(
                 Bits(32)(4), front_entry.imm
             ),
