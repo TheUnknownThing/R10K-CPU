@@ -49,7 +49,6 @@ class LSQ(Downstream):
         self.queue.operate(push_enable=push_valid, push_data=entry, pop_enable=pop_enable)
 
     def select_first_ready(self, register_ready: Array) -> CircularQueueSelection:
-        selected_data = self.queue._storage[0]
         selected_index = self.queue._zero_addr
         selected_distance = self.queue._zero
         selected_valid = Bits(1)(0)
@@ -82,7 +81,6 @@ class LSQ(Downstream):
             
             new_hit = candidate_valid & ~selected_valid
 
-            selected_data = new_hit.select(value, selected_data)
             selected_index = new_hit.select(pointer, selected_index)
             selected_distance = new_hit.select(distance, selected_distance)
             selected_valid = selected_valid | candidate_valid
@@ -92,6 +90,8 @@ class LSQ(Downstream):
             pointer = self.queue._increment_pointer(pointer)
             distance_uint = distance.bitcast(UInt(self.queue.count_bits))
             distance = (distance_uint + self.queue._one).bitcast(Bits(self.queue.count_bits))
+
+        selected_data = self.queue._storage[selected_index]
 
         return CircularQueueSelection(
             data=self.queue._dtype.view(selected_data),
