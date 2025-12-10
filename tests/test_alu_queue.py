@@ -355,7 +355,7 @@ def check(raw: str):
                     queue_storage[tail] = {
                         "valid": 1,
                         "active_idx": step.push["active_idx"],
-                        "alu_idx": tail + 1, # alu_idx is 1-based? In build: (tail + 1)
+                        "alu_idx": tail % 32,
                         "rs1": step.push["rs1"],
                         "rs2": step.push["rs2"],
                         "rd": step.push["rd"],

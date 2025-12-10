@@ -399,7 +399,7 @@ def check(raw: str):
                 entry = {
                     "valid": 1,
                     "active_idx": idx,
-                    "queue_idx": (tail + 1) % 32,
+                    "queue_idx": tail % 32,
                     "is_load": push["is_load"],
                     "is_store": push["is_store"],
                     "imm": push["imm"],

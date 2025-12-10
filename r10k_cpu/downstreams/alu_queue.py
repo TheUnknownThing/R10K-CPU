@@ -31,7 +31,7 @@ class ALUQueue(Downstream):
         entry = ALUQueueEntryType.bundle(
             valid=push_enable.optional(Bits(1)(0)),
             active_list_idx=active_list_idx,
-            alu_queue_idx=(self.queue.get_tail().bitcast(UInt(5))).bitcast(Bits(5)),  # Next index
+            alu_queue_idx=(self.queue.get_tail().bitcast(UInt(5))).bitcast(Bits(5)),
             rs1_physical=push_data.rs1_physical.optional(Bits(6)(0)),
             rs2_physical=push_data.rs2_physical.optional(Bits(6)(0)),
             rd_physical=push_data.rd_physical.optional(Bits(6)(0)),
