@@ -52,7 +52,8 @@ class Commit(Module):
 
         out_branch = front_entry.ready & is_branch
 
-        need_push_freelist = front_entry.ready & front_entry.has_dest
+        # Because physical register 0 is reserved, we do not push it back to the free list. And when the register is first allocated, its old_physical is 0.
+        need_push_freelist = front_entry.ready & front_entry.has_dest & (front_entry.dest_old_physical != Bits(6)(0))
         need_pop_activelist = front_entry.ready
 
         with Condition(need_pop_activelist & ~flush_recover):
