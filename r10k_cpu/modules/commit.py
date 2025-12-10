@@ -58,7 +58,7 @@ class Commit(Module):
         need_push_freelist = front_entry.ready & front_entry.has_dest & (front_entry.dest_old_physical != Bits(6)(0))
         need_pop_activelist = front_entry.ready
 
-        with Condition(need_pop_activelist & ~flush_recover):
+        with Condition(need_pop_activelist):
             log_parts = ["PC=0x{:08X}"]
             for i in range(32):
                 log_parts.append(f"x{i}=0x{{:08X}}")
