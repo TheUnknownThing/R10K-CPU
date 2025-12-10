@@ -21,6 +21,8 @@ class Commit(Module):
     ):
         """Graduate instructions, free physical registers, and surface map-table updates."""
 
+        wait_until(~active_list_queue.is_empty())
+
         front_entry = ROBEntryType.view(active_list_queue.front())
         retire_with_dest = front_entry.ready & front_entry.has_dest
 

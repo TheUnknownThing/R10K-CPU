@@ -28,7 +28,7 @@ class LSQ(Downstream):
         entry = LSQEntryType.bundle(
             valid=push_enable.optional(Bits(1)(0)),
             active_list_idx=active_list_idx,
-            lsq_queue_idx=(self.queue.get_tail().bitcast(UInt(5)) + UInt(1)(1)).bitcast(Bits(5)),  # Next index
+            lsq_queue_idx=(self.queue.get_tail().bitcast(UInt(5))).bitcast(Bits(5)),  # Next index
             imm=push_data.imm.optional(Bits(32)(0)),
             is_load=push_data.is_load.optional(Bits(1)(0)),
             is_store=push_data.is_store.optional(Bits(1)(0)),

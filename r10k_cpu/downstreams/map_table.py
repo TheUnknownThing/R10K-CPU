@@ -58,6 +58,8 @@ class MapTable(Downstream):
         commit_write: MapTableWriteEntry,
         flush_to_commit: Value,
     ) -> None:
+        flush_to_commit = flush_to_commit.optional(Bits(1)(0))
+
         rename_en = rename_write.enable.optional(Bits(1)(0))
         rename_logical = rename_write.logical_idx.optional(Bits(self._index_bits)(0))
         rename_physical = rename_write.physical_value.optional(Bits(self.physical_bits)(0))

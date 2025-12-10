@@ -38,6 +38,7 @@ class ActiveList(Downstream):
         pop_enable: Value,
         flush: Value,
     ):
+        flush = flush.optional(Bits(1)(0))
         push_valid = push_inst.valid.optional(Bits(1)(0))
         entry = ROBEntryType.bundle(
             pc=push_inst.pc.optional(Bits(32)(0)),
@@ -61,7 +62,7 @@ class ActiveList(Downstream):
             push_enable=push_valid & ~flush,
             push_data=entry,
             pop_enable=pop_enable & ~flush,
-            clear=flush.optional(Bits(1)(0)),
+            clear=flush,
         )
 
         return self.queue.get_tail()
