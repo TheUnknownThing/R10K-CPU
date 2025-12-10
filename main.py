@@ -32,8 +32,8 @@ from r10k_cpu.common import LSQEntryType
 def build_cpu(
     sram_file: str | None = None,
     resource_base: str = os.getcwd(),
-    sim_threshold: int = 256,
-    idle_threshold: int = 256,
+    sim_threshold: int = 20480,
+    idle_threshold: int = 20480,
 ):
     """Build and elaborate the Naive memory-capable RV32I CPU."""
 
@@ -68,10 +68,10 @@ def build_cpu(
         # This buffer stores store instruction that have been committed but not yet executed.
         store_buffer = RegArray(LSQEntryType, 1, initializer=[0])
 
-        dcache = SRAM(width=32, depth=0x100000000, init_file=sram_file)
+        dcache = SRAM(width=32, depth=0x100000, init_file=sram_file)
         dcache.name = "memory_data"
 
-        icache = SRAM(width=32, depth=0x100000000, init_file=sram_file)
+        icache = SRAM(width=32, depth=0x100000, init_file=sram_file)
         icache.name = "memory_instruction"
 
         PC_reg, PC_addr = fetcher.build()

@@ -49,7 +49,7 @@ class FetcherImpl(Downstream):
         self.stalled[0] = new_stalled
 
         icache.build(
-            we=Bool(0), re=Bool(1), addr=new_PC[2:31].zext(Bits(32)), wdata=Bits(32)(0)
+            we=Bool(0), re=Bool(1), addr=new_PC[2:31].zext(Bits(32))[0:19], wdata=Bits(32)(0)
         )
 
         with Condition(~new_stalled):

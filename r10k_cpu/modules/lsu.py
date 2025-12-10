@@ -22,7 +22,7 @@ class LSU(Module):
 
         # YEAH... Assassyn do not support writing a half word or a byte yet...
         # So we just write a full word always.
-        memory.build(we=store_active, re=load_active, addr=addr, wdata=val)
+        memory.build(we=store_active, re=load_active, addr=addr[0:19], wdata=val)
 
         wb.async_called(
             is_load=load_active,
