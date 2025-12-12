@@ -31,6 +31,7 @@ from r10k_cpu.common import LSQEntryType
 
 def build_cpu(
     sram_file: str | None = None,
+    verilog: bool = False,
     resource_base: str = os.getcwd(),
     sim_threshold: int = 20480,
     idle_threshold: int = 20480,
@@ -218,7 +219,7 @@ def build_cpu(
         register_ready.build(flush_recover=flush_recover)
 
     conf = config(
-        verilog=False,  # pyright: ignore[reportArgumentType]
+        verilog=verilog,  # pyright: ignore[reportArgumentType]
         verbose=False,
         sim_threshold=sim_threshold,
         idle_threshold=idle_threshold,
@@ -232,8 +233,13 @@ def build_cpu(
 
 if __name__ == "__main__":
     sys, simulator_path, verilog_path = build_cpu(
-        sram_file="asms/empty/empty.hex",
+        sram_file="asms/sum100/sum100.hex",
+        verilog=True,
+        sim_threshold=3000,
     )
     sim_output = utils.run_simulator(simulator_path)
-    print("Simulation output:\n", sim_output)
-    # utils.run_verilator(verilog_path)
+    with open("out/sum100_sim.out", "w") as f:
+        f.write(sim_output)
+    ver_output = utils.run_verilator(verilog_path)
+    with open("out/sum100_ver.out", "w") as f:
+        f.write(ver_output)

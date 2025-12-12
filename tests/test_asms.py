@@ -72,8 +72,8 @@ def test_asms_verilator():
 
         shutil.copyfile(hex_path, work_hex_path)
 
-        raw, _, stderr = run_quietly(run_verilator, verilog_path=verilog_path)
-        assert isinstance(raw, str), f"Run simulator failed with stderr: \n {stderr}"
+        raw, _, stderr = run_quietly(run_verilator, verilog_path)
+        assert isinstance(raw, str), f"Run verilator failed with stderr: \n {stderr}"
 
         result = [line for line in raw.splitlines() if line.startswith("@line")][-1]
         assert (

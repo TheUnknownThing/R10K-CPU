@@ -50,7 +50,11 @@ class Decoder(Module):
             self.PC.pop()
 
         # Only the first wait_until is effective in verilator, so we must stack multiple conditions here.
-        wait_until(PC_valid & ~active_list.is_full() & (~args.is_branch | ~speculation_state.speculating[0]))
+        wait_until(
+            PC_valid
+            & ~active_list.is_full()
+            & (~args.is_branch | ~speculation_state.speculating[0])
+        )
 
         with Condition(dest_valid):
             register_ready.mark_not_ready(physical_rd, enable=dest_valid)
@@ -73,7 +77,7 @@ class Decoder(Module):
             is_naturally_ready=args.is_store | args.is_terminator,
         )
 
-        alu_push_enable = args.is_alu
+        alu_push_enable = attach_context(args.is_alu)
         alu_queue_entry = ALUQueuePushEntry(
             rs1_physical=physical_rs1,
             rs2_physical=physical_rs2,
@@ -99,10 +103,10 @@ class Decoder(Module):
             op_type=args.mem_op,
         )
 
-        free_list_pop_enable = dest_valid
+        free_list_pop_enable = attach_context(dest_valid)
 
         map_table_entry = MapTableWriteEntry(
-            enable=dest_valid,
+            enable=attach_context(dest_valid),
             logical_idx=logical_rd,
             physical_value=physical_rd,
         )
@@ -110,7 +114,7 @@ class Decoder(Module):
         fetcher_entry = FetcherImplEntry(
             decode_success=attach_context(Bits(1)(1)),
             stall=args.is_jump | args.is_terminator,
-            is_branch=args.is_branch,
+            is_branch=attach_context(args.is_branch),
             branch_offset=args.imm,
         )
 
@@ -123,5 +127,5 @@ class Decoder(Module):
             lsq_entry,
             free_list_pop_enable,
             map_table_entry,
-            args.is_branch,
+            attach_context(args.is_branch),
         )
