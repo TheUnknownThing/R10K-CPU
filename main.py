@@ -7,7 +7,7 @@ from r10k_cpu.downstreams.fetcher_impl import FetcherImpl
 from r10k_cpu.downstreams.free_list import FreeList
 from r10k_cpu.downstreams.active_list import ActiveList
 from r10k_cpu.downstreams.alu_queue import ALUQueue
-from r10k_cpu.downstreams.lsq import LSQ
+from r10k_cpu.downstreams.lsq import LSQ, StoreBuffer
 from r10k_cpu.downstreams.map_table import MapTable, MapTableWriteEntry
 from r10k_cpu.downstreams.register_ready import RegisterReady
 from r10k_cpu.downstreams.predictor import (
@@ -67,7 +67,7 @@ def build_cpu(
         register_ready = RegisterReady(num_registers=64)
 
         # This buffer stores store instruction that have been committed but not yet executed.
-        store_buffer = RegArray(LSQEntryType, 1, initializer=[0])
+        store_buffer = StoreBuffer()
 
         dcache = SRAM(width=32, depth=0x100000, init_file=sram_file)
         dcache.name = "memory_data"
@@ -109,7 +109,7 @@ def build_cpu(
             wb=writeback,
         )
 
-        scheduler_down_entry = scheduler.build(
+        scheduler_down_entry, store_buffer_pop_enable = scheduler.build(
             alu_queue=alu_queue,
             lsq=lsq,
             store_buffer=store_buffer,
@@ -202,13 +202,12 @@ def build_cpu(
             flush=flush_recover,
         )
 
-        lsq.build(
+        store_buffer_push_enable, store_buffer_push_data = lsq.build(
             pop_enable=mem_pop,
             push_enable=lsq_push_enable,
             push_data=lsq_entry,
             active_list_idx=active_list_idx,
             flush=flush_recover,
-            store_buffer=store_buffer,
         )
 
         speculation_state.build(
@@ -217,6 +216,12 @@ def build_cpu(
         )
 
         register_ready.build(flush_recover=flush_recover)
+
+        store_buffer.build(
+            push_enable=store_buffer_push_enable,
+            push_data=store_buffer_push_data,
+            pop_enable=store_buffer_pop_enable,
+        )
 
     conf = config(
         verilog=verilog,  # pyright: ignore[reportArgumentType]
