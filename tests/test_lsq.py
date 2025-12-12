@@ -152,7 +152,7 @@ class Driver(Module):
             imm=push_imm,
         )
 
-        self.queue.build(push_en, push_entry, pop_en, active_idx, flush_en, self.store_buffer)
+        sb_push_en, sb_push_data = self.queue.build(push_en, push_entry, pop_en, active_idx, flush_en)
 
         # Issue logic
         issue_idx_val = Bits(self.queue.queue.addr_bits)(0)
