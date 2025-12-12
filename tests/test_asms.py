@@ -1,10 +1,10 @@
 import os
 import re
 import shutil
+import pytest
 
 from assassyn.frontend import *
-from assassyn.backend import elaborate
-from assassyn.utils import run_simulator, build_simulator
+from assassyn.utils import run_simulator, build_simulator, run_verilator
 
 from main import build_cpu
 from utils import run_quietly
@@ -38,6 +38,44 @@ def test_asms():
         assert isinstance(raw, str), f"Run simulator failed with stderr: \n {stderr}"
 
         result = raw.splitlines()[-1]
+        assert (
+            "PC=0x00000008" in result
+        ), f"The processor is not down properly while testing {test_case}"
+
+        ret = re.search(r"x10=(0x[0-9a-fA-F]+)", result)
+        assert (
+            ret
+        ), f"Can't find result in the last line of output while testing {test_case}"
+        ret = int(ret.group(1), 16)
+        assert (
+            ret == expected_result
+        ), f"Test failed for {test_case}: expect result is {expected_result}, get {ret}"
+        print(f"{test_case} passed!")
+
+@pytest.mark.slow
+def test_asms_verilator():
+    work_hex_path = os.path.join(work_path, "exe.hex")
+
+    os.makedirs(work_path, exist_ok=True)
+    sys, simulator_path, verilog_path = build_cpu(
+        sram_file=work_hex_path, sim_threshold=1000000, verilog=True
+    )
+
+    test_cases = os.listdir(test_cases_path)
+    print(test_cases)
+
+    for test_case in test_cases:
+        hex_path = os.path.join(test_cases_path, test_case, test_case + ".hex")
+        out_path = os.path.join(test_cases_path, test_case, test_case + ".out")
+        with open(out_path, "r") as f:
+            expected_result = int(f.readline())
+
+        shutil.copyfile(hex_path, work_hex_path)
+
+        raw, _, stderr = run_quietly(run_verilator, verilog_path=verilog_path)
+        assert isinstance(raw, str), f"Run simulator failed with stderr: \n {stderr}"
+
+        result = [line for line in raw.splitlines() if line.startswith("@line")][-1]
         assert (
             "PC=0x00000008" in result
         ), f"The processor is not down properly while testing {test_case}"
