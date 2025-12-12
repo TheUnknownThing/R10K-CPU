@@ -28,10 +28,6 @@ class Decoder(Module):
         speculation_state: SpeculationState,
         register_ready: RegisterReady,
     ):
-        PC: Value = self.pop_all_ports(
-            validate=True
-        )  # pyright: ignore[reportAssignmentType]
-
         instruction: Value = instruction_reg[0]
         rd = instruction[7:11]
         rs1 = instruction[15:19]
@@ -48,8 +44,13 @@ class Decoder(Module):
         physical_rs1 = map_table.read_spec(rs1)
         physical_rs2 = map_table.read_spec(rs2)
 
-        wait_until(~active_list.is_full())
-        wait_until(~args.is_branch | ~speculation_state.speculating[0])
+        PC_valid = self.PC.valid()
+        PC: Value = PC_valid.select(self.PC.peek(), Bits(32)(0))
+        with Condition(PC_valid):
+            self.PC.pop()
+
+        # Only the first wait_until is effective in verilator, so we must stack multiple conditions here.
+        wait_until(PC_valid & ~active_list.is_full() & (~args.is_branch | ~speculation_state.speculating[0]))
 
         with Condition(dest_valid):
             register_ready.mark_not_ready(physical_rd, enable=dest_valid)
