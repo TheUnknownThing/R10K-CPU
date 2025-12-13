@@ -223,6 +223,9 @@ def build_cpu(
             pop_enable=store_buffer_pop_enable,
         )
 
+        sys.expose_on_top(PC_reg, "Output")
+        sys.expose_on_top(physical_register_file, "Output")
+
     conf = config(
         verilog=verilog,  # pyright: ignore[reportArgumentType]
         verbose=False,

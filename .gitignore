@@ -14,3 +14,4 @@ examples/
 workspace/
 test.py
 tmp/
+out/

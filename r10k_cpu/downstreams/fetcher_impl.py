@@ -53,4 +53,5 @@ class FetcherImpl(Downstream):
         )
 
         with Condition(~new_stalled):
-            decoder.async_called(PC=new_PC)
+            decoder_call = decoder.async_called(PC=new_PC)
+            decoder_call.bind.set_fifo_depth(PC=1)

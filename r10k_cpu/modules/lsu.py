@@ -24,7 +24,7 @@ class LSU(Module):
         # So we just write a full word always.
         memory.build(we=store_active, re=load_active, addr=addr[0:19], wdata=val)
 
-        wb.async_called(
+        wb_call = wb.async_called(
             is_load=load_active,
             is_store=store_active,
             need_update_active_list=need_update_active_list,
@@ -32,4 +32,13 @@ class LSU(Module):
             dest_physical=instr.rd_physical,
             active_list_idx=instr.active_list_idx,
             addr=addr,
+        )
+        wb_call.bind.set_fifo_depth(
+            is_load=1,
+            is_store=1,
+            need_update_active_list=1,
+            op_type=1,
+            dest_physical=1,
+            active_list_idx=1,
+            addr=1,
         )

@@ -29,7 +29,8 @@ class SchedulerDown(Downstream):
 
         with Condition(entry.alu_selection.valid.optional(Bits(1)(0)) & ~flush):
             entry.alu_queue.mark_issued(index=entry.alu_selection.index)
-            entry.alu.async_called(instr=entry.alu_selection.data)
+            alu_call = entry.alu.async_called(instr=entry.alu_selection.data)
+            alu_call.bind.set_fifo_depth(instr=1)
 
         issue_lsq = (
             entry.lsq_selection.valid.optional(Bits(1)(0)) & ~buffer_valid & ~flush
@@ -39,8 +40,9 @@ class SchedulerDown(Downstream):
             entry.lsq.mark_issued(index=entry.lsq_selection.index)
 
         with Condition(issue_lsq | buffer_valid):
-            entry.lsu.async_called(
+            lsu_call = entry.lsu.async_called(
                 instr=buffer_valid.select(
                     entry.buffer_instr.value(), entry.lsq_selection.data.value()
                 )
             )
+            lsu_call.bind.set_fifo_depth(instr=1)
