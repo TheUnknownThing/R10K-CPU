@@ -128,7 +128,7 @@ class ALU(Module):
 
 class Multiply_ALU(Module):
     div_busy: Array
-    products: Array
+    products: list[Array]
 
     instr: Port
 
@@ -162,9 +162,9 @@ class Multiply_ALU(Module):
         product_bits: int = products[
             0
         ].dtype.bits  # pyright: ignore[reportAttributeAccessIssue]
-        self.products = RegArray(Bits(product_bits), len(products))
+        self.products = [RegArray(Bits(product_bits), 1) for _ in range(len(products))]
         for i in range(len(products)):
-            self.products[i] = products[i]
+            self.products[i][0] = products[i]
 
         class MultiplyReduceLevel(Module):
             instr: Port
@@ -173,10 +173,10 @@ class Multiply_ALU(Module):
                 super().__init__(ports={"instr": Port(ALUQueueEntryType)})
 
             @module.combinational
-            def build(self, products: Array, sum_level: Module, flush: Array):
+            def build(self, products: list[Array], sum_level: Module, flush: Array):
                 instr = self.instr.pop()
                 sum, carry = wallace_tree.wallace_tree(
-                    [products[i] for i in range(products.size)]
+                    [products[i][0] for i in range(len(products))]
                 )
 
                 with Condition(~flush[0]):
