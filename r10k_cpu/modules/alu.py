@@ -14,7 +14,7 @@ from r10k_cpu.common import (
 )
 from r10k_cpu.downstreams.active_list import ActiveList
 from r10k_cpu.downstreams.register_ready import RegisterReady
-from r10k_cpu.utils import attach_context
+from r10k_cpu.utils import attach_context, leading_zero_count
 
 
 ALU_OP_COUNT = len(ALU_Code)
@@ -274,12 +274,12 @@ class Multiply_ALU(Module):
                     with Condition(is_new):
                         op_a = self.op_a.pop()
                         op_b = self.op_b.pop()
-                        op_b = op_b
-                        pa = op_a.zext(Bits(32 + 32 + 1))
+                        lzc = leading_zero_count(op_a)
+                        pa = (op_a << lzc).zext(Bits(32 + 32 + 1))
 
                         self.PA[0] = pa
                         self.B[0] = op_b
-                        self.i[0] = UInt(6)(0)
+                        self.i[0] = lzc.zext(UInt(6))
 
                         self.async_called()
 

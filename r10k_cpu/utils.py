@@ -1,3 +1,4 @@
+from math import ceil, log2
 from assassyn.frontend import *
 from assassyn.ir.dtype import RecordValue
 from assassyn.ir.array import ArrayRead
@@ -55,3 +56,23 @@ def neg(value: Value) -> Value:
     return ((~value).bitcast(UInt(bits)) + UInt(bits)(1)).bitcast(dtype)
 
 
+def leading_zero_count(value: Value) -> Value:
+    """Count the number of leading zeros in a Bits value."""
+
+    bits = value.dtype.bits  # pyright: ignore[reportAttributeAccessIssue]
+    bit_count = ceil(log2(bits))
+
+    def recursive(left: int, right: int) -> Value:
+        if left == right:
+            return UInt(bit_count)(0)
+        if left + 1 == right:
+            return value[bits - 1 - left : bits - 1 - left].zext(UInt(bit_count))
+        mid = (left + right) // 2
+        left_half = recursive(left, mid)
+        right_half = recursive(mid, right)
+        left_half_count = mid - left
+        return (left_half == UInt(bit_count)(left_half_count)).select(
+            left_half + right_half, left_half
+        )
+
+    return recursive(0, bits)
