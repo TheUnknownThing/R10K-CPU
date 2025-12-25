@@ -56,7 +56,7 @@ def neg(value: Value) -> Value:
     return ((~value).bitcast(UInt(bits)) + UInt(bits)(1)).bitcast(dtype)
 
 
-def leading_zero_count(value: Value) -> Value:
+def leading_zero_count(value: Value, *, trailing: bool = False) -> Value:
     """Count the number of leading zeros in a Bits value."""
 
     bits = value.dtype.bits  # pyright: ignore[reportAttributeAccessIssue]
@@ -66,7 +66,10 @@ def leading_zero_count(value: Value) -> Value:
         if left == right:
             return UInt(bit_count)(0)
         if left + 1 == right:
-            return value[bits - 1 - left : bits - 1 - left].zext(UInt(bit_count))
+            if trailing:
+                return (~value[left : left]).zext(UInt(bit_count))
+            else:
+                return (~value[bits - 1 - left : bits - 1 - left]).zext(UInt(bit_count))
         mid = (left + right) // 2
         left_half = recursive(left, mid)
         right_half = recursive(mid, right)

@@ -240,6 +240,7 @@ class Multiply_ALU(Module):
             PA: Array
             B: Array
             i: Array
+            tzc: Array
 
             def __init__(self):
                 super().__init__(
@@ -254,6 +255,7 @@ class Multiply_ALU(Module):
                 self.PA = RegArray(Bits(32 + 32 + 1), 1)
                 self.B = RegArray(Bits(32), 1)
                 self.i = RegArray(UInt(6), 1)
+                self.tzc = RegArray(UInt(5), 1)
 
             @module.combinational
             def build(self, flush: Array, update_register: Callable):
@@ -275,45 +277,23 @@ class Multiply_ALU(Module):
                         op_a = self.op_a.pop()
                         op_b = self.op_b.pop()
                         lzc = leading_zero_count(op_a)
+                        tzc = leading_zero_count(op_a, trailing=True)
                         pa = (op_a << lzc).zext(Bits(32 + 32 + 1))
 
                         self.PA[0] = pa
                         self.B[0] = op_b
                         self.i[0] = lzc.zext(UInt(6))
+                        self.tzc[0] = tzc
 
                         self.async_called()
 
                     with Condition(~is_new):
                         is_loop_end = self.i[0] == Bits(6)(32)
                         with Condition(is_loop_end):
-                            instr = self.instr.pop()
-                            quotient_sign = self.quotient_sign.pop()
-                            remainder_sign = self.remainder_sign.pop()
-
                             quotient = self.PA[0][0:31]
-                            raw_remainder = self.PA[0][32:63]
-                            is_remainder_negative = self.PA[0][64:64]
-                            remainder = is_remainder_negative.select(
-                                combination_adder(
-                                    raw_remainder, self.B[0], 4
-                                )[0],
-                                raw_remainder,
-                            )
-                            final_quotient = quotient_sign.select(
-                                utils.neg(quotient), quotient
-                            )
-                            final_remainder = remainder_sign.select(
-                                utils.neg(remainder), remainder
-                            )
+                            raw_remainder = self.PA[0][32:64]
 
-                            is_div = (
-                                instr.alu_op == Bits(ALU_CODE_LEN)(ALU_Code.DIV.value)
-                            ) | (
-                                instr.alu_op == Bits(ALU_CODE_LEN)(ALU_Code.DIVU.value)
-                            )
-                            result = is_div.select(final_quotient, final_remainder)
-
-                            update_register(flush, instr, result)
+                            self.finish(flush, update_register, quotient, raw_remainder)
 
                         with Condition(~is_loop_end):
                             is_negative = self.PA[0][64:64]
@@ -329,7 +309,40 @@ class Multiply_ALU(Module):
                             new_A = self.PA[0][0:30].concat(~new_P[32:32])
                             self.PA[0] = new_P.concat(new_A)
                             self.i[0] = self.i[0] + UInt(6)(1)
-                            self.async_called()
+
+                            delta = UInt(6)(32) - self.i[0]
+                            exhausted = (new_P == Bits(33)(0)) & (delta <= self.tzc[0])
+
+                            with Condition(exhausted):
+                                quotient = self.PA[0][0:31] << delta
+                                raw_remainder = Bits(33)(0)
+
+                                self.finish(
+                                    flush, update_register, quotient, raw_remainder
+                                )
+
+                            with Condition(~exhausted):
+                                self.async_called()
+
+            def finish(self, flush, update_register, quotient, raw_remainder):
+                instr = self.instr.pop()
+                quotient_sign = self.quotient_sign.pop()
+                remainder_sign = self.remainder_sign.pop()
+
+                is_remainder_negative = raw_remainder[32:32]
+                remainder = is_remainder_negative.select(
+                    combination_adder(raw_remainder[0:31], self.B[0], 4)[0],
+                    raw_remainder[0:31],
+                )
+                final_quotient = quotient_sign.select(utils.neg(quotient), quotient)
+                final_remainder = remainder_sign.select(utils.neg(remainder), remainder)
+
+                is_div = (instr.alu_op == Bits(ALU_CODE_LEN)(ALU_Code.DIV.value)) | (
+                    instr.alu_op == Bits(ALU_CODE_LEN)(ALU_Code.DIVU.value)
+                )
+                result = is_div.select(final_quotient, final_remainder)
+
+                update_register(flush, instr, result)
 
         mul_reduce_level = MultiplyReduceLevel()
         mul_sum_level = MultiplySumLevel()
