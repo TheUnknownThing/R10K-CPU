@@ -11,6 +11,7 @@ from assassyn.frontend import Value, Bits
 from dataclasses import dataclass
 from enum import Enum
 from typing import Callable, Optional
+from collections import defaultdict
 
 from r10k_cpu.utils import Bool, sext
 
@@ -94,17 +95,19 @@ class Instruction:
     is_jalr: bool
     is_alu: bool = True
 
-    def matches(self, instruction: Value) -> Value:
-        op_match = instruction[0:6] == Bits(7)(self.opcode)
+    def matches(
+            self, opcode: Value, funct3: Value, funct7: Value
+        ) -> Value:
+        op_match = opcode == Bits(7)(self.opcode)
         funct3_match = (
             Bool(1)
             if self.funct3 is None
-            else instruction[12:14] == Bits(3)(self.funct3)
+            else funct3 == Bits(3)(self.funct3)
         )
         funct7_match = (
             Bool(1)
             if self.funct7 is None
-            else instruction[25:31] == Bits(7)(self.funct7)
+            else funct7 == Bits(7)(self.funct7)
         )
         return op_match & funct3_match & funct7_match
 
@@ -493,10 +496,53 @@ class Instructions(Enum):
     )
 
 
-def select_instruction_args(instruction: Value) -> InstructionArgs:
-    args = default_instruction_arguments()
+def select_instruction_args(
+        instruction: Value,
+        opcode: Value,
+        funct3: Value,
+        funct7: Value,
+    ) -> InstructionArgs:
+    instr_by_opcode = defaultdict(list)
     for instr in Instructions:
         instr_obj: Instruction = instr.value
-        cond = instr_obj.matches(instruction)
-        args = instr_obj.select_args(cond, instruction, args)
-    return args
+        instr_by_opcode[instr_obj.opcode].append(instr_obj)
+
+    final_args = default_instruction_arguments()
+    
+    for op_val, instr_list in instr_by_opcode.items():
+        is_this_opcode = opcode == Bits(7)(op_val)
+        opcode_args = default_instruction_arguments()
+        for instr_obj in instr_list:
+            cond = instr_obj.matches(opcode, funct3, funct7)
+            opcode_args = instr_obj.select_args(cond, instruction, opcode_args)
+
+        final_args = select_args_struct(is_this_opcode, opcode_args, final_args)
+
+    return final_args
+
+def select_args_struct(cond: Value, true_args: InstructionArgs, false_args: InstructionArgs) -> InstructionArgs:
+    """Helper to mux entire InstructionArgs structures"""
+    new_args = default_instruction_arguments()
+    
+    # Manually iterate fields to create the multiplexer for each signal
+    new_args.has_rd = cond.select(true_args.has_rd, false_args.has_rd)
+    new_args.has_rs1 = cond.select(true_args.has_rs1, false_args.has_rs1)
+    new_args.has_rs2 = cond.select(true_args.has_rs2, false_args.has_rs2)
+    new_args.imm = cond.select(true_args.imm, false_args.imm)
+    
+    new_args.is_alu = cond.select(true_args.is_alu, false_args.is_alu)
+    new_args.alu_op = cond.select(true_args.alu_op, false_args.alu_op)
+    new_args.operant1_from = cond.select(true_args.operant1_from, false_args.operant1_from)
+    new_args.operant2_from = cond.select(true_args.operant2_from, false_args.operant2_from)
+    
+    new_args.is_load = cond.select(true_args.is_load, false_args.is_load)
+    new_args.is_store = cond.select(true_args.is_store, false_args.is_store)
+    new_args.mem_op = cond.select(true_args.mem_op, false_args.mem_op)
+    
+    new_args.is_branch = cond.select(true_args.is_branch, false_args.is_branch)
+    new_args.branch_flip = cond.select(true_args.branch_flip, false_args.branch_flip)
+    new_args.is_terminator = cond.select(true_args.is_terminator, false_args.is_terminator)
+    new_args.is_jump = cond.select(true_args.is_jump, false_args.is_jump)
+    new_args.is_jalr = cond.select(true_args.is_jalr, false_args.is_jalr)
+    
+    return new_args

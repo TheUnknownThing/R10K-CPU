@@ -32,7 +32,10 @@ class Decoder(Module):
         rd = instruction[7:11]
         rs1 = instruction[15:19]
         rs2 = instruction[20:24]
-        args = select_instruction_args(instruction)
+        opcode = instruction[0:6]
+        funct3 = instruction[12:14]
+        funct7 = instruction[25:31]
+        args = select_instruction_args(instruction, opcode, funct3, funct7)
 
         has_dest = args.has_rd
         logical_rd = has_dest.select(rd, Bits(5)(0))
