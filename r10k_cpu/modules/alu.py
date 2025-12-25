@@ -1,8 +1,10 @@
+from typing import Callable
 from algorithms import wallace_tree
 from algorithms.adder import combination_adder
 from algorithms.multiply_partial_products import radix4_partial_products
 from assassyn.frontend import *
 from assassyn.ir.dtype import RecordValue
+from r10k_cpu import utils
 from r10k_cpu.common import (
     ALUQueueEntryType,
     ALU_CODE_LEN,
@@ -167,6 +169,22 @@ class Multiply_ALU(Module):
         for i in range(len(products)):
             self.products[i][0] = products[i]
 
+        def update_register(flush, instr, result):
+            physical_register_file[instr.rd_physical] = result
+
+            register_ready.mark_ready(
+                instr.rd_physical, enable=attach_context(~flush[0])
+            )
+
+            active_list_index = instr.active_list_idx
+            with Condition(~flush[0]):
+                active_list.set_ready(
+                    index=active_list_index,
+                    actual_branch=None,
+                    new_imm=None,
+                    new_imm_enable=None,
+                )
+
         class MultiplyReduceLevel(Module):
             instr: Port
 
@@ -198,13 +216,7 @@ class Multiply_ALU(Module):
                 )
 
             @module.combinational
-            def build(
-                self,
-                physical_register_file: Array,
-                register_ready: RegisterReady,
-                active_list: ActiveList,
-                flush: Array,
-            ):
+            def build(self, flush: Array, update_register: Callable):
                 instr, sum, carry = self.pop_all_ports(False)
 
                 summary = combination_adder(sum, carry, 4)[0]
@@ -216,32 +228,120 @@ class Multiply_ALU(Module):
                 )
                 result = is_higher_word.select(summary[32:63], summary[0:31])
 
-                physical_register_file[instr.rd_physical] = result
+                update_register(flush, instr, result)
 
-                register_ready.mark_ready(
-                    instr.rd_physical, enable=attach_context(~flush[0])
+        class Divider(Module):
+            instr: Port
+            op_a: Port
+            op_b: Port
+            quotient_sign: Port
+            remainder_sign: Port
+
+            PA: Array
+            B: Array
+            i: Array
+
+            def __init__(self):
+                super().__init__(
+                    ports={
+                        "instr": Port(ALUQueueEntryType),
+                        "quotient_sign": Port(Bits(1)),
+                        "remainder_sign": Port(Bits(1)),
+                        "op_a": Port(Bits(32)),
+                        "op_b": Port(Bits(32)),
+                    }
                 )
+                self.PA = RegArray(Bits(32 + 32 + 1), 1)
+                self.B = RegArray(Bits(32), 1)
+                self.i = RegArray(UInt(6), 1)
 
-                active_list_index = instr.active_list_idx
+            @module.combinational
+            def build(self, flush: Array, update_register: Callable):
+                with Condition(flush[0]):
+                    with Condition(self.instr.valid()):
+                        self.instr.pop()
+                    with Condition(self.op_a.valid()):
+                        self.op_a.pop()
+                    with Condition(self.op_b.valid()):
+                        self.op_b.pop()
+                    with Condition(self.quotient_sign.valid()):
+                        self.quotient_sign.pop()
+                    with Condition(self.remainder_sign.valid()):
+                        self.remainder_sign.pop()
+
                 with Condition(~flush[0]):
-                    active_list.set_ready(
-                        index=active_list_index,
-                        actual_branch=None,
-                        new_imm=None,
-                        new_imm_enable=None,
-                    )
+                    is_new = self.op_a.valid()
+                    with Condition(is_new):
+                        op_a = self.op_a.pop()
+                        op_b = self.op_b.pop()
+                        op_b = op_b
+                        pa = op_a.zext(Bits(32 + 32 + 1))
+
+                        self.PA[0] = pa
+                        self.B[0] = op_b
+                        self.i[0] = UInt(6)(0)
+
+                    with Condition(~is_new):
+                        is_loop_end = self.i[0] == Bits(6)(32)
+                        with Condition(is_loop_end):
+                            instr = self.instr.pop()
+                            quotient_sign = self.quotient_sign.pop()
+                            remainder_sign = self.remainder_sign.pop()
+
+                            quotient = self.PA[0][0:31]
+                            raw_remainder = self.PA[0][32:63]
+                            is_remainder_negative = raw_remainder[31:31]
+                            remainder = is_remainder_negative.select(
+                                combination_adder(
+                                    raw_remainder, ~self.B[0], 4, Bits(1)(1)
+                                )[0],
+                                raw_remainder,
+                            )
+                            final_quotient = quotient_sign.select(
+                                utils.neg(quotient), quotient
+                            )
+                            final_remainder = remainder_sign.select(
+                                utils.neg(remainder), remainder
+                            )
+
+                            is_div = (
+                                instr.alu_op == Bits(ALU_CODE_LEN)(ALU_Code.DIV.value)
+                            ) | (
+                                instr.alu_op == Bits(ALU_CODE_LEN)(ALU_Code.DIVU.value)
+                            )
+                            result = is_div.select(final_quotient, final_remainder)
+
+                            update_register(flush, instr, result)
+
+                        with Condition(~is_loop_end):
+                            is_negtive = self.PA[0][64:64]
+                            new_P = self.PA[0][31:63]
+                            new_P = is_negtive.select(
+                                combination_adder(new_P, self.B[0].zext(Bits(33)), 4)[
+                                    0
+                                ],
+                                combination_adder(
+                                    new_P, ~self.B[0].zext(Bits(33)), 4, Bits(1)(1)
+                                )[0],
+                            )
+                            new_A = self.PA[0][0:30].concat(~is_negtive & ~new_P[32:32])
+                            self.PA[0] = new_P.concat(new_A)
+                            self.i[0] = self.i[0] + UInt(6)(1)
+                            self.async_called()
 
         mul_reduce_level = MultiplyReduceLevel()
         mul_sum_level = MultiplySumLevel()
+        divider = Divider()
         mul_reduce_level.build(
             products=self.products, sum_level=mul_sum_level, flush=flush
         )
-        mul_sum_level.build(
-            physical_register_file=physical_register_file,
-            register_ready=register_ready,
-            active_list=active_list,
-            flush=flush,
-        )
+        mul_sum_level.build(flush=flush, update_register=update_register)
+
+        def update_register_for_div(flush, instr, result):
+            update_register(flush, instr, result)
+            self.div_busy[0] = Bits(1)(0)
+
+        divider.build(flush=flush, update_register=update_register_for_div)
 
         is_mul = (
             (instr.alu_op == Bits(ALU_CODE_LEN)(ALU_Code.MUL.value))
@@ -250,5 +350,39 @@ class Multiply_ALU(Module):
             | (instr.alu_op == Bits(ALU_CODE_LEN)(ALU_Code.MULU.value))
         )
 
+        with Condition(flush[0]):
+            self.div_busy[0] = Bits(1)(0)
+
         with Condition(is_mul & ~flush[0]):
             mul_reduce_level.async_called(instr=instr)
+
+        with Condition(~is_mul & ~flush[0]):
+            is_div = instr.alu_op == Bits(ALU_CODE_LEN)(ALU_Code.DIV.value)
+            is_divu = instr.alu_op == Bits(ALU_CODE_LEN)(ALU_Code.DIVU.value)
+
+            is_divider_zero = op_b == Bits(6)(0)
+            is_overflow = (op_a == Bits(32)(0x80000000)) & (
+                op_b == Bits(32)(0xFFFFFFFF)
+            )
+            with Condition(is_divider_zero):
+                update_register_for_div(
+                    flush, instr, is_div.select(Bits(32)(0xFFFFFFFF), op_a)
+                )
+            with Condition(is_overflow):
+                update_register_for_div(
+                    flush, instr, is_div.select(Bits(32)(0x80000000), op_a)
+                )
+
+            abs_op_a = op_a[31:31].select(utils.neg(op_a), op_a)
+            abs_op_b = op_b[31:31].select(utils.neg(op_b), op_b)
+            is_quotient_negative = (op_a[31:31] ^ op_b[31:31]) & is_div
+            is_remainder_negative = op_a[31:31] & is_divu
+
+            with Condition(~is_divider_zero & ~is_overflow):
+                divider.async_called(
+                    instr=instr,
+                    op_a=abs_op_a,
+                    op_b=abs_op_b,
+                    quotient_sign=is_quotient_negative,
+                    remainder_sign=is_remainder_negative,
+                )

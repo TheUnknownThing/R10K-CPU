@@ -47,3 +47,11 @@ def is_between(value: Value, lower: Value, upper: Value) -> Value:
     return is_wrapped.select(
         is_after_lower | is_before_upper, is_after_lower & is_before_upper
     )
+
+
+def neg(value: Value) -> Value:
+    dtype: DType = value.dtype  # pyright: ignore[reportAssignmentType]
+    bits: int = dtype.bits
+    return ((~value).bitcast(UInt(bits)) + UInt(bits)(1)).bitcast(dtype)
+
+
