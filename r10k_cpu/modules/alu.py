@@ -1,4 +1,5 @@
 from algorithms import wallace_tree
+from algorithms.adder import combination_adder
 from algorithms.multiply_partial_products import basic_partial_products
 from assassyn.frontend import *
 from assassyn.ir.dtype import RecordValue
@@ -50,8 +51,8 @@ class ALU(Module):
 
         results = [Bits(32)(0) for _ in range(ALU_OP_COUNT)]
 
-        results[ALU_Code.ADD.value] = (op_a_int + op_b_int).bitcast(Bits(32))
-        results[ALU_Code.SUB.value] = (op_a_int - op_b_int).bitcast(Bits(32))
+        results[ALU_Code.ADD.value] = combination_adder(op_a, op_b, 4)[0]
+        results[ALU_Code.SUB.value] = combination_adder(op_a, ~op_b, 4, Bits(1)(1))[0]
         results[ALU_Code.SLL.value] = op_a << shamt_u
         results[ALU_Code.SRL.value] = op_a >> shamt_u
         results[ALU_Code.SRA.value] = (op_a_int >> shamt_u).bitcast(Bits(32))
@@ -206,8 +207,7 @@ class Multiply_ALU(Module):
             ):
                 instr, sum, carry = self.pop_all_ports(False)
 
-                # TODO: Optimize this addition
-                summary = sum + carry
+                summary = combination_adder(sum, carry, 4)[0]
 
                 is_higher_word = (
                     (instr.alu_op == (Bits(ALU_CODE_LEN)(ALU_Code.MULH.value)))
