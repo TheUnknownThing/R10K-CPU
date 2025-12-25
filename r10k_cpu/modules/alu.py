@@ -1,3 +1,4 @@
+from algorithms.adder import combination_adder
 from assassyn.frontend import *
 from assassyn.ir.dtype import RecordValue
 from r10k_cpu.common import (
@@ -41,8 +42,8 @@ class ALU(Module):
 
         results= [Bits(32)(0) for _ in range(ALU_OP_COUNT)]
 
-        results[RV32I_ALU_Code.ADD.value] = (op_a_int + op_b_int).bitcast(Bits(32))
-        results[RV32I_ALU_Code.SUB.value] = (op_a_int - op_b_int).bitcast(Bits(32))
+        results[RV32I_ALU_Code.ADD.value] = combination_adder(op_a, op_b, 4)[0]
+        results[RV32I_ALU_Code.SUB.value] = combination_adder(op_a, ~op_b, 4, Bits(1)(1))[0]
         results[RV32I_ALU_Code.SLL.value] = op_a << shamt_u
         results[RV32I_ALU_Code.SRL.value] = op_a >> shamt_u
         results[RV32I_ALU_Code.SRA.value] = (op_a_int >> shamt_u).bitcast(Bits(32))
