@@ -383,6 +383,31 @@ class Instructions(Enum):
     SLTU = RTypeInstruction(
         opcode=0b0110011, alu_op=ALU_Code.SLTU, funct3=0x3, funct7=0x00
     )
+    
+    MUL = RTypeInstruction(
+        opcode=0b0110011, alu_op=ALU_Code.MUL, funct3=0x0, funct7=0x01
+    )
+    MULH = RTypeInstruction(
+        opcode=0b0110011, alu_op=ALU_Code.MULH, funct3=0x1, funct7=0x01
+    )
+    MULSU = RTypeInstruction(
+        opcode=0b0110011, alu_op=ALU_Code.MULSU, funct3=0x2, funct7=0x01
+    )
+    MULU = RTypeInstruction(
+        opcode=0b0110011, alu_op=ALU_Code.MULU, funct3=0x3, funct7=0x01
+    )
+    DIV = RTypeInstruction(
+        opcode=0b0110011, alu_op=ALU_Code.DIV, funct3=0x4, funct7=0x01
+    )
+    DIVU = RTypeInstruction(
+        opcode=0b0110011, alu_op=ALU_Code.DIVU, funct3=0x5, funct7=0x01
+    )
+    REM = RTypeInstruction(
+        opcode=0b0110011, alu_op=ALU_Code.REM, funct3=0x6, funct7=0x01
+    )
+    REMU = RTypeInstruction(
+        opcode=0b0110011, alu_op=ALU_Code.REMU, funct3=0x7, funct7=0x01
+    )
 
     ADDI = ITypeInstruction(opcode=0b0010011, alu_op=ALU_Code.ADD, funct3=0x0)
     XORI = ITypeInstruction(opcode=0b0010011, alu_op=ALU_Code.XOR, funct3=0x4)
