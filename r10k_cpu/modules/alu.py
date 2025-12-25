@@ -281,6 +281,8 @@ class Multiply_ALU(Module):
                         self.B[0] = op_b
                         self.i[0] = UInt(6)(0)
 
+                        self.async_called()
+
                     with Condition(~is_new):
                         is_loop_end = self.i[0] == Bits(6)(32)
                         with Condition(is_loop_end):
@@ -290,10 +292,10 @@ class Multiply_ALU(Module):
 
                             quotient = self.PA[0][0:31]
                             raw_remainder = self.PA[0][32:63]
-                            is_remainder_negative = raw_remainder[31:31]
+                            is_remainder_negative = self.PA[0][64:64]
                             remainder = is_remainder_negative.select(
                                 combination_adder(
-                                    raw_remainder, ~self.B[0], 4, Bits(1)(1)
+                                    raw_remainder, self.B[0], 4
                                 )[0],
                                 raw_remainder,
                             )
@@ -314,9 +316,9 @@ class Multiply_ALU(Module):
                             update_register(flush, instr, result)
 
                         with Condition(~is_loop_end):
-                            is_negtive = self.PA[0][64:64]
+                            is_negative = self.PA[0][64:64]
                             new_P = self.PA[0][31:63]
-                            new_P = is_negtive.select(
+                            new_P = is_negative.select(
                                 combination_adder(new_P, self.B[0].zext(Bits(33)), 4)[
                                     0
                                 ],
@@ -324,7 +326,7 @@ class Multiply_ALU(Module):
                                     new_P, ~self.B[0].zext(Bits(33)), 4, Bits(1)(1)
                                 )[0],
                             )
-                            new_A = self.PA[0][0:30].concat(~is_negtive & ~new_P[32:32])
+                            new_A = self.PA[0][0:30].concat(~new_P[32:32])
                             self.PA[0] = new_P.concat(new_A)
                             self.i[0] = self.i[0] + UInt(6)(1)
                             self.async_called()
@@ -358,25 +360,31 @@ class Multiply_ALU(Module):
 
         with Condition(~is_mul & ~flush[0]):
             is_div = instr.alu_op == Bits(ALU_CODE_LEN)(ALU_Code.DIV.value)
+            is_rem = instr.alu_op == Bits(ALU_CODE_LEN)(ALU_Code.REM.value)
             is_divu = instr.alu_op == Bits(ALU_CODE_LEN)(ALU_Code.DIVU.value)
 
-            is_divider_zero = op_b == Bits(6)(0)
-            is_overflow = (op_a == Bits(32)(0x80000000)) & (
-                op_b == Bits(32)(0xFFFFFFFF)
+            is_signed = is_div | is_rem
+
+            is_divider_zero = op_b == Bits(32)(0)
+            is_overflow = (
+                (op_a == Bits(32)(0x80000000))
+                & (op_b == Bits(32)(0xFFFFFFFF))
+                & is_signed
             )
             with Condition(is_divider_zero):
+                is_div_like = is_div | is_divu
                 update_register_for_div(
-                    flush, instr, is_div.select(Bits(32)(0xFFFFFFFF), op_a)
+                    flush, instr, is_div_like.select(Bits(32)(0xFFFFFFFF), op_a)
                 )
             with Condition(is_overflow):
                 update_register_for_div(
-                    flush, instr, is_div.select(Bits(32)(0x80000000), op_a)
+                    flush, instr, is_div.select(Bits(32)(0x80000000), Bits(32)(0))
                 )
 
-            abs_op_a = op_a[31:31].select(utils.neg(op_a), op_a)
-            abs_op_b = op_b[31:31].select(utils.neg(op_b), op_b)
-            is_quotient_negative = (op_a[31:31] ^ op_b[31:31]) & is_div
-            is_remainder_negative = op_a[31:31] & is_divu
+            abs_op_a = (is_signed & op_a[31:31]).select(utils.neg(op_a), op_a)
+            abs_op_b = (is_signed & op_b[31:31]).select(utils.neg(op_b), op_b)
+            is_quotient_negative = (op_a[31:31] ^ op_b[31:31]) & is_signed
+            is_remainder_negative = op_a[31:31] & is_signed
 
             with Condition(~is_divider_zero & ~is_overflow):
                 divider.async_called(
