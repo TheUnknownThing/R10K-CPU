@@ -14,7 +14,7 @@ def combination_adder(
     ) -> tuple[Value, Value, Value, Value]:
         if right - left <= ripple_carry_length:
             P = Bits(1)(1)
-            G = Bits(0)(0)
+            G = Bits(1)(0)
             C = Cin
             S = Bits(0)(0)
             for i in range(left, right):
