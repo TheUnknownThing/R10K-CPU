@@ -1,6 +1,6 @@
 from algorithms import wallace_tree
 from algorithms.adder import combination_adder
-from algorithms.multiply_partial_products import basic_partial_products
+from algorithms.multiply_partial_products import radix4_partial_products
 from assassyn.frontend import *
 from assassyn.ir.dtype import RecordValue
 from r10k_cpu.common import (
@@ -159,7 +159,7 @@ class Multiply_ALU(Module):
         extended_op_a = is_op_a_signed.select(op_a[31:31], Bits(1)(0)).concat(op_a)
         extended_op_b = is_op_b_signed.select(op_b[31:31], Bits(1)(0)).concat(op_b)
 
-        products = basic_partial_products(extended_op_a, extended_op_b)
+        products = radix4_partial_products(extended_op_a, extended_op_b)
         product_bits: int = products[
             0
         ].dtype.bits  # pyright: ignore[reportAttributeAccessIssue]
