@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from assassyn.frontend import *
 from assassyn.ir.dtype import RecordValue
 from dataclass.circular_queue import CircularQueueSelection
+from r10k_cpu.common import ALU_CODE_LEN, ALU_Code
 from r10k_cpu.downstreams.alu_queue import ALUQueue
 from r10k_cpu.downstreams.lsq import LSQ
 
@@ -10,6 +11,7 @@ from r10k_cpu.downstreams.lsq import LSQ
 class SchedulerDownEntry:
     alu_selection: CircularQueueSelection
     alu: Module
+    multiply_alu: Module
     alu_queue: ALUQueue
     buffer_valid: Value
     buffer_instr: RecordValue
@@ -29,8 +31,17 @@ class SchedulerDown(Downstream):
 
         with Condition(entry.alu_selection.valid.optional(Bits(1)(0)) & ~flush):
             entry.alu_queue.mark_issued(index=entry.alu_selection.index)
-            alu_call = entry.alu.async_called(instr=entry.alu_selection.data)
-            alu_call.bind.set_fifo_depth(instr=1)
+            is_mul = entry.alu_selection.data.alu_op >= Bits(ALU_CODE_LEN)(
+                ALU_Code.MUL.value
+            )
+            with Condition(is_mul):
+                alu_call = entry.multiply_alu.async_called(
+                    instr=entry.alu_selection.data
+                )
+                alu_call.bind.set_fifo_depth(instr=1)
+            with Condition(~is_mul):
+                alu_call = entry.alu.async_called(instr=entry.alu_selection.data)
+                alu_call.bind.set_fifo_depth(instr=1)
 
         issue_lsq = (
             entry.lsq_selection.valid.optional(Bits(1)(0)) & ~buffer_valid & ~flush

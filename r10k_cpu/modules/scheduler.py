@@ -23,6 +23,7 @@ class Scheduler(Module):
         store_buffer: StoreBuffer,
         register_ready: RegisterReady,
         alu: Module,
+        multiply_alu: Module,
         lsu: Module,
     ):
         """Select ready instructions from active list and LSQ for execution."""
@@ -35,6 +36,7 @@ class Scheduler(Module):
             SchedulerDownEntry(
                 alu_selection=alu_selection,
                 alu=alu,
+                multiply_alu=multiply_alu,
                 alu_queue=alu_queue,
                 buffer_valid=buffer_instr.valid,
                 buffer_instr=buffer_instr,

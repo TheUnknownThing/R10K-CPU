@@ -7,7 +7,7 @@ def basic_partial_products(a: Value, b: Value) -> list[Value]:
 
     products = []
     for i in range(bits_b):
-        bit = b[i]
+        bit = b[i:i]
         partial_product = (
             bit.select(a, Bits(bits_a)(0))
             .concat(Bits(i)(0))

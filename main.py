@@ -22,7 +22,7 @@ from r10k_cpu.modules.decoder import Decoder
 from r10k_cpu.modules.driver import Driver
 from r10k_cpu.modules.fetcher import Fetcher
 from r10k_cpu.modules.lsu import LSU
-from r10k_cpu.modules.alu import ALU
+from r10k_cpu.modules.alu import ALU, Multiply_ALU
 from r10k_cpu.modules.writeback import WriteBack
 from r10k_cpu.modules.scheduler import Scheduler
 
@@ -49,6 +49,7 @@ def build_cpu(
         free_list = FreeList(register_number=2**6)  # 64 physical registers
         active_list = ActiveList(depth=2**5)  # Active List depth = 32
         alu = ALU()
+        mul_alu = Multiply_ALU()
         lsu = LSU()
         writeback = WriteBack()
         alu_queue = ALUQueue(depth=2**5)  # ALU Queue depth = 32
@@ -103,6 +104,13 @@ def build_cpu(
             active_list=active_list,
         )
 
+        mul_alu.build(
+            physical_register_file=physical_register_file,
+            register_ready=register_ready,
+            active_list=active_list,
+            flush=commit.flush,
+        )
+
         lsu.build(
             physical_register_file=physical_register_file,
             memory=dcache,
@@ -115,6 +123,7 @@ def build_cpu(
             store_buffer=store_buffer,
             register_ready=register_ready,
             alu=alu,
+            multiply_alu=mul_alu,
             lsu=lsu,
         )
 

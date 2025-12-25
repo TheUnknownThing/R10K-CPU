@@ -13,10 +13,10 @@ def wallace_tree(adders: list[Value]) -> tuple[Value, Value]:
             group = current_level[i : i + 3]
             if len(group) == 3:
                 a, b, c = group
-                sum_ = a ^ b ^ c
+                sum = a ^ b ^ c
                 carry = (a & b) | (b & c) | (a & c)
-                next_level.append(sum_)
-                next_level.append(carry << 1)
+                next_level.append(sum)
+                next_level.append(carry.concat(Bits(1)(0)).bitcast(Bits(carry.dtype.bits)))
             else:
                 next_level.extend(group)
         current_level = next_level

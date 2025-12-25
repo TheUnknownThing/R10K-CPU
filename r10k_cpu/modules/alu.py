@@ -143,7 +143,7 @@ class Multiply_ALU(Module):
         physical_register_file: Array,
         register_ready: RegisterReady,
         active_list: ActiveList,
-        flush: Value,
+        flush: Array,
     ):
         instr: RecordValue = ALUQueueEntryType.view(self.pop_all_ports(False))
 
@@ -173,13 +173,13 @@ class Multiply_ALU(Module):
                 super().__init__(ports={"instr": Port(ALUQueueEntryType)})
 
             @module.combinational
-            def build(self, products: Array, sum_level: Module, flush: Value):
+            def build(self, products: Array, sum_level: Module, flush: Array):
                 instr = self.instr.pop()
                 sum, carry = wallace_tree.wallace_tree(
                     [products[i] for i in range(products.size)]
                 )
 
-                with Condition(~flush):
+                with Condition(~flush[0]):
                     sum_level.async_called(instr=instr, sum=sum, carry=carry)
 
         class MultiplySumLevel(Module):
@@ -197,32 +197,38 @@ class Multiply_ALU(Module):
                 )
 
             @module.combinational
-            def build(self, active_list: ActiveList, flush: Value):
-                instr, result, carry = self.pop_all_ports(False)
+            def build(
+                self,
+                physical_register_file: Array,
+                register_ready: RegisterReady,
+                active_list: ActiveList,
+                flush: Array,
+            ):
+                instr, sum, carry = self.pop_all_ports(False)
 
                 # TODO: Optimize this addition
-                result = result + carry
+                summary = sum + carry
 
-                is_higher_word = instr.alu_op == (
-                    Bits(ALU_CODE_LEN)(ALU_Code.MULH.value)
+                is_higher_word = (
+                    (instr.alu_op == (Bits(ALU_CODE_LEN)(ALU_Code.MULH.value)))
                     | (instr.alu_op == Bits(ALU_CODE_LEN)(ALU_Code.MULSU.value))
                     | (instr.alu_op == Bits(ALU_CODE_LEN)(ALU_Code.MULU.value))
                 )
-                physical_register_file[instr.rd_physical] = is_higher_word.select(
-                    result[32:63], result[0:31]
-                )
+                result = is_higher_word.select(summary[32:63], summary[0:31])
+
+                physical_register_file[instr.rd_physical] = result
 
                 register_ready.mark_ready(
-                    instr.rd_physical, enable=attach_context(~flush)
+                    instr.rd_physical, enable=attach_context(~flush[0])
                 )
 
                 active_list_index = instr.active_list_idx
-                with Condition(~flush):
+                with Condition(~flush[0]):
                     active_list.set_ready(
                         index=active_list_index,
-                        actual_branch=Bits(0)(0),
-                        new_imm=result[0:32],
-                        new_imm_enable=Bits(0)(0),
+                        actual_branch=None,
+                        new_imm=None,
+                        new_imm_enable=None,
                     )
 
         mul_reduce_level = MultiplyReduceLevel()
@@ -230,7 +236,12 @@ class Multiply_ALU(Module):
         mul_reduce_level.build(
             products=self.products, sum_level=mul_sum_level, flush=flush
         )
-        mul_sum_level.build(active_list=active_list, flush=flush)
+        mul_sum_level.build(
+            physical_register_file=physical_register_file,
+            register_ready=register_ready,
+            active_list=active_list,
+            flush=flush,
+        )
 
         is_mul = (
             (instr.alu_op == Bits(ALU_CODE_LEN)(ALU_Code.MUL.value))
@@ -239,5 +250,5 @@ class Multiply_ALU(Module):
             | (instr.alu_op == Bits(ALU_CODE_LEN)(ALU_Code.MULU.value))
         )
 
-        with Condition(is_mul & ~flush):
+        with Condition(is_mul & ~flush[0]):
             mul_reduce_level.async_called(instr=instr)
