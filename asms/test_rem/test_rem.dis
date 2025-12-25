@@ -1,0 +1,82 @@
+
+/workspaces/assassyn_ws/R10K-CPU/asms/test_rem/test_rem.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00000000 <_start>:
+   0:	00010137          	lui	sp,0x10
+   4:	00c000ef          	jal	10 <main>
+   8:	00100073          	ebreak
+   c:	0000006f          	j	c <_start+0xc>
+
+00000010 <main>:
+  10:	ff010113          	add	sp,sp,-16 # fff0 <main+0xffe0>
+  14:	00012223          	sw	zero,4(sp)
+  18:	06400713          	li	a4,100
+  1c:	00e12423          	sw	a4,8(sp)
+  20:	00a00793          	li	a5,10
+  24:	00f12623          	sw	a5,12(sp)
+  28:	00812783          	lw	a5,8(sp)
+  2c:	00c12683          	lw	a3,12(sp)
+  30:	00412503          	lw	a0,4(sp)
+  34:	00300593          	li	a1,3
+  38:	02d7e7b3          	rem	a5,a5,a3
+  3c:	f9c00613          	li	a2,-100
+  40:	ffd00693          	li	a3,-3
+  44:	00a787b3          	add	a5,a5,a0
+  48:	00f12223          	sw	a5,4(sp)
+  4c:	00e12423          	sw	a4,8(sp)
+  50:	00b12623          	sw	a1,12(sp)
+  54:	00812783          	lw	a5,8(sp)
+  58:	00c12803          	lw	a6,12(sp)
+  5c:	00412503          	lw	a0,4(sp)
+  60:	0307e7b3          	rem	a5,a5,a6
+  64:	00a787b3          	add	a5,a5,a0
+  68:	00f12223          	sw	a5,4(sp)
+  6c:	00c12423          	sw	a2,8(sp)
+  70:	00b12623          	sw	a1,12(sp)
+  74:	00812783          	lw	a5,8(sp)
+  78:	00c12503          	lw	a0,12(sp)
+  7c:	00412583          	lw	a1,4(sp)
+  80:	02a7e7b3          	rem	a5,a5,a0
+  84:	00b787b3          	add	a5,a5,a1
+  88:	00f12223          	sw	a5,4(sp)
+  8c:	00e12423          	sw	a4,8(sp)
+  90:	00d12623          	sw	a3,12(sp)
+  94:	00812783          	lw	a5,8(sp)
+  98:	00c12583          	lw	a1,12(sp)
+  9c:	00412703          	lw	a4,4(sp)
+  a0:	02b7e7b3          	rem	a5,a5,a1
+  a4:	00e787b3          	add	a5,a5,a4
+  a8:	00f12223          	sw	a5,4(sp)
+  ac:	00c12423          	sw	a2,8(sp)
+  b0:	00d12623          	sw	a3,12(sp)
+  b4:	00812783          	lw	a5,8(sp)
+  b8:	00c12683          	lw	a3,12(sp)
+  bc:	00412703          	lw	a4,4(sp)
+  c0:	02d7e7b3          	rem	a5,a5,a3
+  c4:	00e787b3          	add	a5,a5,a4
+  c8:	00f12223          	sw	a5,4(sp)
+  cc:	00100793          	li	a5,1
+  d0:	00f12423          	sw	a5,8(sp)
+  d4:	00012623          	sw	zero,12(sp)
+  d8:	00812783          	lw	a5,8(sp)
+  dc:	00c12683          	lw	a3,12(sp)
+  e0:	00412703          	lw	a4,4(sp)
+  e4:	02d7e7b3          	rem	a5,a5,a3
+  e8:	00e787b3          	add	a5,a5,a4
+  ec:	00f12223          	sw	a5,4(sp)
+  f0:	800007b7          	lui	a5,0x80000
+  f4:	00f12423          	sw	a5,8(sp)
+  f8:	fff00793          	li	a5,-1
+  fc:	00f12623          	sw	a5,12(sp)
+ 100:	00812783          	lw	a5,8(sp)
+ 104:	00c12683          	lw	a3,12(sp)
+ 108:	00412703          	lw	a4,4(sp)
+ 10c:	02d7e7b3          	rem	a5,a5,a3
+ 110:	00e787b3          	add	a5,a5,a4
+ 114:	00f12223          	sw	a5,4(sp)
+ 118:	00412503          	lw	a0,4(sp)
+ 11c:	01010113          	add	sp,sp,16
+ 120:	00008067          	ret
