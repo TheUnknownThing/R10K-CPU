@@ -4,21 +4,6 @@ int input_data1[DATA_SIZE];
 int input_data2[DATA_SIZE];
 int results_data[DATA_SIZE];
 
-int multiply(int a, int b) {
-    int result = 0;
-    int neg = 0;
-    if (a < 0) { a = -a; neg = !neg; }
-    if (b < 0) { b = -b; neg = !neg; }
-    
-    while (b > 0) {
-        if (b & 1) result += a;
-        a <<= 1;
-        b >>= 1;
-    }
-    
-    return neg ? -result : result;
-}
-
 int main() {
     int i;
     // Initialize data
@@ -29,7 +14,7 @@ int main() {
 
     // Perform multiplication
     for (i = 0; i < DATA_SIZE; i++) {
-        results_data[i] = multiply(input_data1[i], input_data2[i]);
+        results_data[i] = input_data1[i] * input_data2[i];
     }
 
     // Verify

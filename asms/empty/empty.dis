@@ -1,5 +1,5 @@
 
-./asms/empty/empty.elf:     file format elf32-littleriscv
+asms/empty/empty.elf:     file format elf32-littleriscv
 
 
 Disassembly of section .text:

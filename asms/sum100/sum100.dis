@@ -1,5 +1,5 @@
 
-./asms/sum100/sum100.elf:     file format elf32-littleriscv
+asms/sum100/sum100.elf:     file format elf32-littleriscv
 
 
 Disassembly of section .text:
