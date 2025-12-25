@@ -4,14 +4,14 @@ from r10k_cpu.common import (
     ALUQueueEntryType,
     ALU_CODE_LEN,
     OPERANT_FROM_LEN,
-    RV32I_ALU_Code,
+    ALU_Code,
     OperantFrom,
 )
 from r10k_cpu.downstreams.active_list import ActiveList
 from r10k_cpu.downstreams.register_ready import RegisterReady
 
 
-ALU_OP_COUNT = len(RV32I_ALU_Code)
+ALU_OP_COUNT = len(ALU_Code)
 
 class ALU(Module):
     """
@@ -41,18 +41,18 @@ class ALU(Module):
 
         results= [Bits(32)(0) for _ in range(ALU_OP_COUNT)]
 
-        results[RV32I_ALU_Code.ADD.value] = (op_a_int + op_b_int).bitcast(Bits(32))
-        results[RV32I_ALU_Code.SUB.value] = (op_a_int - op_b_int).bitcast(Bits(32))
-        results[RV32I_ALU_Code.SLL.value] = op_a << shamt_u
-        results[RV32I_ALU_Code.SRL.value] = op_a >> shamt_u
-        results[RV32I_ALU_Code.SRA.value] = (op_a_int >> shamt_u).bitcast(Bits(32))
-        results[RV32I_ALU_Code.AND.value] = op_a & op_b
-        results[RV32I_ALU_Code.OR.value] = op_a | op_b
-        results[RV32I_ALU_Code.XOR.value] = op_a ^ op_b
-        results[RV32I_ALU_Code.SLT.value] = (op_a_int < op_b_int).select(
+        results[ALU_Code.ADD.value] = (op_a_int + op_b_int).bitcast(Bits(32))
+        results[ALU_Code.SUB.value] = (op_a_int - op_b_int).bitcast(Bits(32))
+        results[ALU_Code.SLL.value] = op_a << shamt_u
+        results[ALU_Code.SRL.value] = op_a >> shamt_u
+        results[ALU_Code.SRA.value] = (op_a_int >> shamt_u).bitcast(Bits(32))
+        results[ALU_Code.AND.value] = op_a & op_b
+        results[ALU_Code.OR.value] = op_a | op_b
+        results[ALU_Code.XOR.value] = op_a ^ op_b
+        results[ALU_Code.SLT.value] = (op_a_int < op_b_int).select(
             Bits(32)(1), Bits(32)(0)
         )
-        results[RV32I_ALU_Code.SLTU.value] = (op_a < op_b).select(
+        results[ALU_Code.SLTU.value] = (op_a < op_b).select(
             Bits(32)(1), Bits(32)(0)
         )
 
@@ -95,7 +95,7 @@ class ALU(Module):
         def mask(idx: int) -> Value:
             return Bits(ALU_OP_COUNT)(1 << idx)
 
-        for opcode in RV32I_ALU_Code:
+        for opcode in ALU_Code:
             cond = alu_op == Bits(ALU_CODE_LEN)(opcode.value)
             op_select = cond.select(mask(opcode.value), op_select)
         return op_select

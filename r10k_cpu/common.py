@@ -48,7 +48,7 @@ LSQEntryType = Record(
 )
 
 
-class RV32I_ALU_Code(Enum):
+class ALU_Code(Enum):
     ADD = 0
     SUB = 1
     SLL = 2
@@ -59,9 +59,16 @@ class RV32I_ALU_Code(Enum):
     SRL = 7
     OR = 8
     AND = 9
+    MUL = 10
+    MULH = 11
+    MULSU = 12
+    MULU = 13
+    DIV = 14
+    DIVU = 15
+    REM = 16
+    REMU = 17
 
-
-ALU_CODE_LEN = ceil(log2(len(RV32I_ALU_Code)))
+ALU_CODE_LEN = ceil(log2(len(ALU_Code)))
 
 
 class OperantFrom(Enum):

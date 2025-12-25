@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from assassyn.frontend import *
 from dataclass.circular_queue import CircularQueue, CircularQueueSelection
-from r10k_cpu.common import ALUQueueEntryType, OperantFrom, OPERANT_FROM_LEN
+from r10k_cpu.common import ALU_CODE_LEN, ALUQueueEntryType, OperantFrom, OPERANT_FROM_LEN
 from r10k_cpu.downstreams.register_ready import RegisterReady
 from r10k_cpu.utils import replace_bundle
 
@@ -35,7 +35,7 @@ class ALUQueue(Downstream):
             rs1_physical=push_data.rs1_physical.optional(Bits(6)(0)),
             rs2_physical=push_data.rs2_physical.optional(Bits(6)(0)),
             rd_physical=push_data.rd_physical.optional(Bits(6)(0)),
-            alu_op=push_data.alu_op.optional(Bits(4)(0)),
+            alu_op=push_data.alu_op.optional(Bits(ALU_CODE_LEN)(0)),
             imm=push_data.imm.optional(Bits(32)(0)),
             operant1_from=push_data.operant1_from.optional(Bits(OPERANT_FROM_LEN)(0)),
             operant2_from=push_data.operant2_from.optional(Bits(OPERANT_FROM_LEN)(0)),

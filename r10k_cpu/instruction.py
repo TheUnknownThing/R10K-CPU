@@ -4,7 +4,7 @@ from r10k_cpu.common import (
     MEMORY_OP_TYPE_LEN,
     OPERANT_FROM_LEN,
     MemoryOpType,
-    RV32I_ALU_Code,
+    ALU_Code,
 )
 from assassyn.frontend import Value, Bits
 
@@ -72,7 +72,7 @@ def default_instruction_arguments() -> InstructionArgs:
 
 @dataclass
 class ALUInfo:
-    alu_op: RV32I_ALU_Code
+    alu_op: ALU_Code
     operant1_from: OperantFrom
     operant2_from: OperantFrom
 
@@ -142,7 +142,7 @@ class Instruction:
 
 
 class RTypeInstruction(Instruction):
-    def __init__(self, opcode: int, alu_op: RV32I_ALU_Code, funct3: int, funct7: int):
+    def __init__(self, opcode: int, alu_op: ALU_Code, funct3: int, funct7: int):
         super().__init__(
             opcode=opcode,
             funct3=funct3,
@@ -166,7 +166,7 @@ class ITypeInstruction(Instruction):
     def __init__(
         self,
         opcode: int,
-        alu_op: RV32I_ALU_Code,
+        alu_op: ALU_Code,
         funct3: int,
         funct7: Optional[int] = None,
         is_load: bool = False,
@@ -221,7 +221,7 @@ class STypeInstruction(Instruction):
     def __init__(
         self,
         opcode: int,
-        alu_op: RV32I_ALU_Code,
+        alu_op: ALU_Code,
         funct3: int,
         mem_op: MemoryOpType,
     ):
@@ -272,7 +272,7 @@ class BTypeInstruction(Instruction):
             Bits(32),
         )
 
-    def __init__(self, alu_op: RV32I_ALU_Code, funct3: int, branch_flip: bool = False):
+    def __init__(self, alu_op: ALU_Code, funct3: int, branch_flip: bool = False):
 
         super().__init__(
             opcode=self.OPCODE,
@@ -302,7 +302,7 @@ class UTypeInstruction(Instruction):
     def __init__(
         self,
         opcode: int,
-        alu_op: RV32I_ALU_Code,
+        alu_op: ALU_Code,
         operant1_from: OperantFrom,
         operant2_from: OperantFrom,
     ):
@@ -324,7 +324,7 @@ class UTypeInstruction(Instruction):
 
 
 class JTypeInstruction(Instruction):
-    def __init__(self, opcode: int, alu_op: RV32I_ALU_Code):
+    def __init__(self, opcode: int, alu_op: ALU_Code):
         def imm_fn(instruction: Value) -> Value:
             imm_19_12 = instruction[12:19]
             imm_11 = instruction[20:20]
@@ -354,83 +354,83 @@ class JTypeInstruction(Instruction):
 
 class Instructions(Enum):
     ADD = RTypeInstruction(
-        opcode=0b0110011, alu_op=RV32I_ALU_Code.ADD, funct3=0x0, funct7=0x00
+        opcode=0b0110011, alu_op=ALU_Code.ADD, funct3=0x0, funct7=0x00
     )
     SUB = RTypeInstruction(
-        opcode=0b0110011, alu_op=RV32I_ALU_Code.SUB, funct3=0x0, funct7=0x20
+        opcode=0b0110011, alu_op=ALU_Code.SUB, funct3=0x0, funct7=0x20
     )
     XOR = RTypeInstruction(
-        opcode=0b0110011, alu_op=RV32I_ALU_Code.XOR, funct3=0x4, funct7=0x00
+        opcode=0b0110011, alu_op=ALU_Code.XOR, funct3=0x4, funct7=0x00
     )
     OR = RTypeInstruction(
-        opcode=0b0110011, alu_op=RV32I_ALU_Code.OR, funct3=0x6, funct7=0x00
+        opcode=0b0110011, alu_op=ALU_Code.OR, funct3=0x6, funct7=0x00
     )
     AND = RTypeInstruction(
-        opcode=0b0110011, alu_op=RV32I_ALU_Code.AND, funct3=0x7, funct7=0x00
+        opcode=0b0110011, alu_op=ALU_Code.AND, funct3=0x7, funct7=0x00
     )
     SLL = RTypeInstruction(
-        opcode=0b0110011, alu_op=RV32I_ALU_Code.SLL, funct3=0x1, funct7=0x00
+        opcode=0b0110011, alu_op=ALU_Code.SLL, funct3=0x1, funct7=0x00
     )
     SRL = RTypeInstruction(
-        opcode=0b0110011, alu_op=RV32I_ALU_Code.SRL, funct3=0x5, funct7=0x00
+        opcode=0b0110011, alu_op=ALU_Code.SRL, funct3=0x5, funct7=0x00
     )
     SRA = RTypeInstruction(
-        opcode=0b0110011, alu_op=RV32I_ALU_Code.SRA, funct3=0x5, funct7=0x20
+        opcode=0b0110011, alu_op=ALU_Code.SRA, funct3=0x5, funct7=0x20
     )
     SLT = RTypeInstruction(
-        opcode=0b0110011, alu_op=RV32I_ALU_Code.SLT, funct3=0x2, funct7=0x00
+        opcode=0b0110011, alu_op=ALU_Code.SLT, funct3=0x2, funct7=0x00
     )
     SLTU = RTypeInstruction(
-        opcode=0b0110011, alu_op=RV32I_ALU_Code.SLTU, funct3=0x3, funct7=0x00
+        opcode=0b0110011, alu_op=ALU_Code.SLTU, funct3=0x3, funct7=0x00
     )
 
-    ADDI = ITypeInstruction(opcode=0b0010011, alu_op=RV32I_ALU_Code.ADD, funct3=0x0)
-    XORI = ITypeInstruction(opcode=0b0010011, alu_op=RV32I_ALU_Code.XOR, funct3=0x4)
-    ORI = ITypeInstruction(opcode=0b0010011, alu_op=RV32I_ALU_Code.OR, funct3=0x6)
-    ANDI = ITypeInstruction(opcode=0b0010011, alu_op=RV32I_ALU_Code.AND, funct3=0x7)
+    ADDI = ITypeInstruction(opcode=0b0010011, alu_op=ALU_Code.ADD, funct3=0x0)
+    XORI = ITypeInstruction(opcode=0b0010011, alu_op=ALU_Code.XOR, funct3=0x4)
+    ORI = ITypeInstruction(opcode=0b0010011, alu_op=ALU_Code.OR, funct3=0x6)
+    ANDI = ITypeInstruction(opcode=0b0010011, alu_op=ALU_Code.AND, funct3=0x7)
     SLLI = ITypeInstruction(
-        opcode=0b0010011, alu_op=RV32I_ALU_Code.SLL, funct3=0x1, funct7=0x00
+        opcode=0b0010011, alu_op=ALU_Code.SLL, funct3=0x1, funct7=0x00
     )
     SRLI = ITypeInstruction(
-        opcode=0b0010011, alu_op=RV32I_ALU_Code.SRL, funct3=0x5, funct7=0x00
+        opcode=0b0010011, alu_op=ALU_Code.SRL, funct3=0x5, funct7=0x00
     )
     SRAI = ITypeInstruction(
-        opcode=0b0010011, alu_op=RV32I_ALU_Code.SRA, funct3=0x5, funct7=0x20
+        opcode=0b0010011, alu_op=ALU_Code.SRA, funct3=0x5, funct7=0x20
     )
-    SLTI = ITypeInstruction(opcode=0b0010011, alu_op=RV32I_ALU_Code.SLT, funct3=0x2)
-    SLTIU = ITypeInstruction(opcode=0b0010011, alu_op=RV32I_ALU_Code.SLTU, funct3=0x3)
+    SLTI = ITypeInstruction(opcode=0b0010011, alu_op=ALU_Code.SLT, funct3=0x2)
+    SLTIU = ITypeInstruction(opcode=0b0010011, alu_op=ALU_Code.SLTU, funct3=0x3)
 
     LB = ITypeInstruction(
         opcode=0b0000011,
-        alu_op=RV32I_ALU_Code.ADD,
+        alu_op=ALU_Code.ADD,
         funct3=0x0,
         is_load=True,
         mem_op=MemoryOpType.BYTE,
     )
     LH = ITypeInstruction(
         opcode=0b0000011,
-        alu_op=RV32I_ALU_Code.ADD,
+        alu_op=ALU_Code.ADD,
         funct3=0x1,
         is_load=True,
         mem_op=MemoryOpType.HALF,
     )
     LW = ITypeInstruction(
         opcode=0b0000011,
-        alu_op=RV32I_ALU_Code.ADD,
+        alu_op=ALU_Code.ADD,
         funct3=0x2,
         is_load=True,
         mem_op=MemoryOpType.WORD,
     )
     LBU = ITypeInstruction(
         opcode=0b0000011,
-        alu_op=RV32I_ALU_Code.ADD,
+        alu_op=ALU_Code.ADD,
         funct3=0x4,
         is_load=True,
         mem_op=MemoryOpType.BYTE_U,
     )
     LHU = ITypeInstruction(
         opcode=0b0000011,
-        alu_op=RV32I_ALU_Code.ADD,
+        alu_op=ALU_Code.ADD,
         funct3=0x5,
         is_load=True,
         mem_op=MemoryOpType.HALF_U,
@@ -438,38 +438,38 @@ class Instructions(Enum):
 
     SB = STypeInstruction(
         opcode=0b0100011,
-        alu_op=RV32I_ALU_Code.ADD,
+        alu_op=ALU_Code.ADD,
         funct3=0x0,
         mem_op=MemoryOpType.BYTE,
     )
     SH = STypeInstruction(
         opcode=0b0100011,
-        alu_op=RV32I_ALU_Code.ADD,
+        alu_op=ALU_Code.ADD,
         funct3=0x1,
         mem_op=MemoryOpType.HALF,
     )
     SW = STypeInstruction(
         opcode=0b0100011,
-        alu_op=RV32I_ALU_Code.ADD,
+        alu_op=ALU_Code.ADD,
         funct3=0x2,
         mem_op=MemoryOpType.WORD,
     )
 
     # alu 结果非零跳转，全零不跳转
-    BNE = BTypeInstruction(alu_op=RV32I_ALU_Code.SUB, funct3=0x1)
-    BLT = BTypeInstruction(alu_op=RV32I_ALU_Code.SLT, funct3=0x4)
-    BLTU = BTypeInstruction(alu_op=RV32I_ALU_Code.SLTU, funct3=0x6)
+    BNE = BTypeInstruction(alu_op=ALU_Code.SUB, funct3=0x1)
+    BLT = BTypeInstruction(alu_op=ALU_Code.SLT, funct3=0x4)
+    BLTU = BTypeInstruction(alu_op=ALU_Code.SLTU, funct3=0x6)
 
     # alu 结果全零跳转，非零不跳转
-    BEQ = BTypeInstruction(alu_op=RV32I_ALU_Code.SUB, funct3=0x0, branch_flip=True)
-    BGE = BTypeInstruction(alu_op=RV32I_ALU_Code.SLT, funct3=0x5, branch_flip=True)
-    BGEU = BTypeInstruction(alu_op=RV32I_ALU_Code.SLTU, funct3=0x7, branch_flip=True)
+    BEQ = BTypeInstruction(alu_op=ALU_Code.SUB, funct3=0x0, branch_flip=True)
+    BGE = BTypeInstruction(alu_op=ALU_Code.SLT, funct3=0x5, branch_flip=True)
+    BGEU = BTypeInstruction(alu_op=ALU_Code.SLTU, funct3=0x7, branch_flip=True)
 
-    JAL = JTypeInstruction(opcode=0b1101111, alu_op=RV32I_ALU_Code.ADD)
+    JAL = JTypeInstruction(opcode=0b1101111, alu_op=ALU_Code.ADD)
     JALR = ITypeInstruction(
         opcode=0b1100111,
         funct3=0x0,
-        alu_op=RV32I_ALU_Code.ADD,
+        alu_op=ALU_Code.ADD,
         operant1_from=OperantFrom.RS1,
         operant2_from=OperantFrom.IMM,
         is_jalr=True,
@@ -477,19 +477,19 @@ class Instructions(Enum):
 
     LUI = UTypeInstruction(
         opcode=0b0110111,
-        alu_op=RV32I_ALU_Code.OR,
+        alu_op=ALU_Code.OR,
         operant1_from=OperantFrom.IMM,
         operant2_from=OperantFrom.IMM,
     )
     AUIPC = UTypeInstruction(
         opcode=0b0010111,
-        alu_op=RV32I_ALU_Code.ADD,
+        alu_op=ALU_Code.ADD,
         operant1_from=OperantFrom.PC,
         operant2_from=OperantFrom.IMM,
     )
 
     EBREAK = ITypeInstruction(
-        opcode=0b1110011, funct3=0x0, alu_op=RV32I_ALU_Code.ADD, is_terminator=True
+        opcode=0b1110011, funct3=0x0, alu_op=ALU_Code.ADD, is_terminator=True
     )
 
 
