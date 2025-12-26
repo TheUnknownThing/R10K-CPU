@@ -122,35 +122,58 @@ class CircularQueue:
         return pop_data
 
     def choose(self, selector: Callable[[ArrayRead, Value], Value]) -> CircularQueueSelection:
-        """Choose the first element in the queue matching the given selector."""
-        """Selector function takes (value, index) and returns Bool."""
-
-        selected_data = self._storage[0]
-        selected_index = self._zero_addr
-        selected_distance = self._zero
-        selected_valid = Bits(1)(0)
+        """Choose the first element in the queue matching the given selector using a tree mux."""
 
         pointer = self._head[0]
         distance = self._zero
         count_uint = self._count[0].bitcast(UInt(self.count_bits))
 
+        candidates = []
         for offset in range(self.depth):
             offset_uint = UInt(self.count_bits)(offset)
             has_entry = offset_uint < count_uint
             value = self._storage[pointer]
             matches = selector(value, pointer).bitcast(Bits(1))
             candidate_valid = has_entry & matches
-            new_hit = candidate_valid & ~selected_valid
 
-            selected_data = new_hit.select(value, selected_data)
-            selected_index = new_hit.select(pointer, selected_index)
-            selected_distance = new_hit.select(distance, selected_distance)
-            selected_valid = selected_valid | candidate_valid
+            candidates.append(
+                (
+                    value,
+                    pointer,
+                    distance,
+                    candidate_valid,
+                )
+            )
 
             pointer = self._increment_pointer(pointer)
             distance_uint = distance.bitcast(UInt(self.count_bits))
-            incremented_distance = (distance_uint + self._one).bitcast(Bits(self.count_bits))
-            distance = incremented_distance
+            distance = (distance_uint + self._one).bitcast(Bits(self.count_bits))
+
+        # Pad to the next power of two to build a balanced tree.
+        if not candidates:
+            raise ValueError("CircularQueue depth must be positive.")
+
+        next_power = 1 << math.ceil(math.log2(len(candidates)))
+        zero_data, zero_index, zero_distance = candidates[0][0], self._zero_addr, self._zero
+        for _ in range(len(candidates), next_power):
+            candidates.append((zero_data, zero_index, zero_distance, Bits(1)(0)))
+
+        while len(candidates) > 1:
+            next_layer = []
+            for i in range(0, len(candidates), 2):
+                left_data, left_index, left_distance, left_valid = candidates[i]
+                right_data, right_index, right_distance, right_valid = candidates[i + 1]
+
+                # Prefer the left (earlier) element when both are valid.
+                chosen_data = left_valid.select(left_data, right_data)
+                chosen_index = left_valid.select(left_index, right_index)
+                chosen_distance = left_valid.select(left_distance, right_distance)
+                chosen_valid = left_valid | right_valid
+
+                next_layer.append((chosen_data, chosen_index, chosen_distance, chosen_valid))
+            candidates = next_layer
+
+        selected_data, selected_index, selected_distance, selected_valid = candidates[0]
 
         if isinstance(self._dtype, Record):
             data = self._dtype.view(selected_data)

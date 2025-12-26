@@ -1,3 +1,4 @@
+import math
 from dataclasses import dataclass
 from assassyn.frontend import *
 from assassyn.ir.dtype import RecordValue
@@ -65,51 +66,80 @@ class LSQ(Downstream):
     def select_first_ready(
         self, register_ready: RegisterReady
     ) -> CircularQueueSelection:
-        selected_index = self.queue._zero_addr
-        selected_distance = self.queue._zero
-        selected_valid = Bits(1)(0)
+        count_uint = self.queue._count[0].bitcast(UInt(self.queue.count_bits))
+
+        pointers = []
+        distances = []
+        values = []
+        has_entries = []
 
         pointer = self.queue._head[0]
         distance = self.queue._zero
-        count_uint = self.queue._count[0].bitcast(UInt(self.queue.count_bits))
-
-        seen_store = Bits(1)(0)
 
         for offset in range(self.queue.depth):
             offset_uint = UInt(self.queue.count_bits)(offset)
             has_entry = offset_uint < count_uint
 
-            value = self.queue._storage[pointer]
-            entry = LSQEntryType.view(value)
-
-            rs1_ready = self._operand_ready(register_ready, entry.rs1_physical)
-            # We only choose loads here, so rs2 is not needed
-
-            matches = (
-                entry.valid
-                & rs1_ready
-                & ~entry.issued
-                & ~seen_store
-                & ~entry.is_store  # LSQ only picks Loads here
-            )
-
-            candidate_valid = has_entry & matches
-
-            new_hit = candidate_valid & ~selected_valid
-
-            selected_index = new_hit.select(pointer, selected_index)
-            selected_distance = new_hit.select(distance, selected_distance)
-            selected_valid = selected_valid | candidate_valid
-
-            seen_store = seen_store | (has_entry & entry.valid & entry.is_store)
+            pointers.append(pointer)
+            distances.append(distance)
+            values.append(self.queue._storage[pointer])
+            has_entries.append(has_entry)
 
             pointer = self.queue._increment_pointer(pointer)
             distance_uint = distance.bitcast(UInt(self.queue.count_bits))
-            distance = (distance_uint + self.queue._one).bitcast(
-                Bits(self.queue.count_bits)
-            )
+            distance = (distance_uint + self.queue._one).bitcast(Bits(self.queue.count_bits))
 
-        selected_data = self.queue._storage[selected_index]
+        entries = [LSQEntryType.view(v) for v in values]
+        store_flags = [has_entries[i] & entries[i].valid & entries[i].is_store for i in range(self.queue.depth)]
+
+        # Prefix OR with log depth to know if a store appears before each position.
+        store_prefix = store_flags[:]
+        stages = math.ceil(math.log2(self.queue.depth))
+        for stage in range(stages):
+            step = 1 << stage
+            for i in range(self.queue.depth):
+                prev = Bits(1)(0) if i < step else store_prefix[i - step]
+                store_prefix[i] = store_prefix[i] | prev
+
+        any_store_before = [Bits(1)(0)] * self.queue.depth
+        for i in range(self.queue.depth):
+            any_store_before[i] = Bits(1)(0) if i == 0 else store_prefix[i - 1]
+
+        candidates = []
+        for i in range(self.queue.depth):
+            rs1_ready = self._operand_ready(register_ready, entries[i].rs1_physical)
+            matches = (
+                entries[i].valid
+                & rs1_ready
+                & ~entries[i].issued
+                & ~entries[i].is_store
+                & ~any_store_before[i]
+            )
+            candidate_valid = has_entries[i] & matches
+
+            candidates.append((values[i], pointers[i], distances[i], candidate_valid))
+
+        next_power = 1 << math.ceil(math.log2(len(candidates)))
+        zero_data, zero_index, zero_distance = candidates[0][0], self.queue._zero_addr, self.queue._zero
+        for _ in range(len(candidates), next_power):
+            candidates.append((zero_data, zero_index, zero_distance, Bits(1)(0)))
+
+        while len(candidates) > 1:
+            next_layer = []
+            for i in range(0, len(candidates), 2):
+                left_data, left_index, left_distance, left_valid = candidates[i]
+                right_data, right_index, right_distance, right_valid = candidates[i + 1]
+
+                chosen_data = left_valid.select(left_data, right_data)
+                chosen_index = left_valid.select(left_index, right_index)
+                chosen_distance = left_valid.select(left_distance, right_distance)
+                chosen_valid = left_valid | right_valid
+
+                next_layer.append((chosen_data, chosen_index, chosen_distance, chosen_valid))
+
+            candidates = next_layer
+
+        selected_data, selected_index, selected_distance, selected_valid = candidates[0]
 
         return CircularQueueSelection(
             data=LSQEntryType.view(selected_data),

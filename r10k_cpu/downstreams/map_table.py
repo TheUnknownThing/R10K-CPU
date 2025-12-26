@@ -35,16 +35,11 @@ class MapTable(Downstream):
         self._spec_table = RegArray(storage_dtype, 1, initializer=[0])
         self._commit_table = RegArray(storage_dtype, 1, initializer=[0])
 
-        self._index_literals = [Bits(self._index_bits)(i) for i in range(num_logical)]
         self._entry_ranges = [
             (i * physical_bits, (i + 1) * physical_bits - 1) for i in range(num_logical)
         ]
 
-        self._entry_mask = UInt(self._storage_bits)((1 << physical_bits) - 1)
-        self._entry_stride = UInt(self._storage_bits)(physical_bits)
         self._zero_enable = Bits(1)(0)
-        self._zero_index = Bits(self._index_bits)(0)
-        self._zero_physical = Bits(self.physical_bits)(0)
 
     @property
     def logical_bits(self) -> int:
@@ -54,7 +49,7 @@ class MapTable(Downstream):
     def build(
         self,
         *,
-        rename_write: MapTableWriteEntry ,
+        rename_write: MapTableWriteEntry,
         commit_write: MapTableWriteEntry,
         flush_to_commit: Value,
     ) -> None:
@@ -106,30 +101,43 @@ class MapTable(Downstream):
         phys_bits = physical_value.bitcast(Bits(self.physical_bits))
         base_bits = base_value.bitcast(Bits(self._storage_bits))
 
+        one_hot_mask = Bits(self.num_logical)(1) << idx_bits
+        
         chunks = []
         for i in range(self.num_logical):
             lo, hi = self._entry_ranges[i]
             chunk = base_bits[lo:hi]
             
-            is_target = (idx_bits == self._index_literals[i])
+            is_target = one_hot_mask[i:i]
             should_update = is_target & enable_bit
             
             new_chunk = should_update.select(phys_bits, chunk)
             chunks.append(new_chunk)
 
-        # Concatenate chunks. concat expects MSB first, so we reverse the list.
-        # chunks[0] is LSB (index 0), chunks[-1] is MSB.
         result = concat(*reversed(chunks))
 
         return result.bitcast(UInt(self._storage_bits))
 
     def _read_entry(self, table_value: Value, logical_idx: Value) -> Value:
-        idx_bits = logical_idx.bitcast(Bits(self._index_bits))
-        result = Bits(self.physical_bits)(0)
+        current_layer = []
+        for lo, hi in self._entry_ranges:
+            current_layer.append(table_value[lo:hi])
+        
+        next_power = 1 << self._index_bits
+        while len(current_layer) < next_power:
+            current_layer.append(Bits(self.physical_bits)(0))
 
-        for literal, (lo, hi) in zip(self._index_literals, self._entry_ranges):
-            chunk = table_value[lo:hi]
-            match = idx_bits == literal
-            result = match.select(chunk, result)
+        for bit_idx in range(self._index_bits):
+            selector = logical_idx[bit_idx:bit_idx]
+            next_layer = []
+            
+            for i in range(0, len(current_layer), 2):
+                val_even = current_layer[i]
+                val_odd = current_layer[i+1]
+                
+                muxed = selector.select(val_odd, val_even)
+                next_layer.append(muxed)
+            
+            current_layer = next_layer
 
-        return result
+        return current_layer[0]
