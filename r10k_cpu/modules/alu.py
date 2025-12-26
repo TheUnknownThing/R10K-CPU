@@ -240,7 +240,6 @@ class Multiply_ALU(Module):
             PA: Array
             B: Array
             i: Array
-            tzc: Array
 
             def __init__(self):
                 super().__init__(
@@ -255,7 +254,6 @@ class Multiply_ALU(Module):
                 self.PA = RegArray(Bits(32 + 32 + 1), 1)
                 self.B = RegArray(Bits(32), 1)
                 self.i = RegArray(UInt(6), 1)
-                self.tzc = RegArray(UInt(5), 1)
 
             @module.combinational
             def build(self, flush: Array, update_register: Callable):
@@ -277,13 +275,11 @@ class Multiply_ALU(Module):
                         op_a = self.op_a.pop()
                         op_b = self.op_b.pop()
                         lzc = leading_zero_count(op_a)
-                        tzc = leading_zero_count(op_a, trailing=True)
                         pa = (op_a << lzc).zext(Bits(32 + 32 + 1))
 
                         self.PA[0] = pa
                         self.B[0] = op_b
                         self.i[0] = lzc.zext(UInt(6))
-                        self.tzc[0] = tzc
 
                         self.async_called()
 
@@ -310,19 +306,7 @@ class Multiply_ALU(Module):
                             self.PA[0] = new_P.concat(new_A)
                             self.i[0] = self.i[0] + UInt(6)(1)
 
-                            delta = UInt(6)(32) - self.i[0]
-                            exhausted = (new_P == Bits(33)(0)) & (delta <= self.tzc[0])
-
-                            with Condition(exhausted):
-                                quotient = self.PA[0][0:31] << delta
-                                raw_remainder = Bits(33)(0)
-
-                                self.finish(
-                                    flush, update_register, quotient, raw_remainder
-                                )
-
-                            with Condition(~exhausted):
-                                self.async_called()
+                            self.async_called()
 
             def finish(self, flush, update_register, quotient, raw_remainder):
                 instr = self.instr.pop()
