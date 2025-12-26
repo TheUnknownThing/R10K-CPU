@@ -226,7 +226,10 @@ class Driver(Module):
             cond = cycle_val == UInt(32)(i + 1)
             instr_val = cond.select(Bits(32)(test.instruction), instr_val)
             
-        args = select_instruction_args(instr_val)
+        opcode = instr_val[0:6]
+        funct3 = instr_val[12:14]
+        funct7 = instr_val[25:31]
+        args = select_instruction_args(instr_val, opcode, funct3, funct7)
         
         log_str = "cycle: {}, instr: {:x}, "
         log_args = [cycle_val, instr_val]
