@@ -6,6 +6,7 @@ from assassyn.frontend import *
 from assassyn.backend import elaborate
 from assassyn.utils import run_simulator
 
+from r10k_cpu.common import ALU_CODE_LEN
 from tests.utils import run_quietly
 from r10k_cpu.downstreams.alu_queue import ALUQueue, ALUQueuePushEntry
 
@@ -67,7 +68,7 @@ class Driver(Module):
         push_rs1 = Bits(6)(0)
         push_rs2 = Bits(6)(0)
         push_rd = Bits(6)(0)
-        push_op = Bits(4)(0)
+        push_op = Bits(ALU_CODE_LEN)(0)
         push_imm = Bits(32)(0)
         push_op1_from = Bits(3)(0)
         push_op2_from = Bits(3)(0)
@@ -85,7 +86,7 @@ class Driver(Module):
                 push_rs1 = cond.select(Bits(6)(step.push["rs1"]), push_rs1)
                 push_rs2 = cond.select(Bits(6)(step.push["rs2"]), push_rs2)
                 push_rd = cond.select(Bits(6)(step.push["rd"]), push_rd)
-                push_op = cond.select(Bits(4)(step.push["alu_op"]), push_op)
+                push_op = cond.select(Bits(ALU_CODE_LEN)(step.push["alu_op"]), push_op)
                 push_imm = cond.select(Bits(32)(step.push["imm"]), push_imm)
                 push_op1_from = cond.select(Bits(3)(step.push.get("op1_from", 0)), push_op1_from)
                 push_op2_from = cond.select(Bits(3)(step.push.get("op2_from", 1)), push_op2_from)
