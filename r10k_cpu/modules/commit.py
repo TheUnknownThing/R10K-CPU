@@ -8,9 +8,12 @@ from r10k_cpu.downstreams.map_table import MapTable
 class Commit(Module):
     """Commits instructions from the Active List."""
 
+    flush: Array
+
     def __init__(self):
         super().__init__(ports={})
         self.name = "Commit"
+        self.flush = RegArray(Bits(1), 1)
 
     @module.combinational
     def build(
@@ -21,8 +24,6 @@ class Commit(Module):
     ):
         """Graduate instructions, free physical registers, and surface map-table updates."""
 
-        wait_until(~active_list_queue.is_empty())
-
         front_entry = ROBEntryType.view(active_list_queue.front())
         retire_with_dest = front_entry.ready & front_entry.has_dest
 
@@ -31,6 +32,12 @@ class Commit(Module):
             front_entry.predict_branch != front_entry.actual_branch
         )
         flush_recover = front_entry.ready & mispredict
+
+        has_active_entries = ~active_list_queue.is_empty()
+
+        self.flush[0] = flush_recover & has_active_entries
+
+        wait_until(has_active_entries)
 
         commit_write_enable = retire_with_dest
         commit_logical = retire_with_dest.select(front_entry.dest_logical, Bits(5)(0))

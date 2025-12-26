@@ -1,0 +1,102 @@
+
+/workspaces/assassyn_ws/R10K-CPU/asms/test_mul/test_mul.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00000000 <_start>:
+   0:	00010137          	lui	sp,0x10
+   4:	00c000ef          	jal	10 <main>
+   8:	00100073          	ebreak
+   c:	0000006f          	j	c <_start+0xc>
+
+00000010 <main>:
+  10:	ff010113          	add	sp,sp,-16 # fff0 <main+0xffe0>
+  14:	00012223          	sw	zero,4(sp)
+  18:	07b00793          	li	a5,123
+  1c:	00f12423          	sw	a5,8(sp)
+  20:	1c800793          	li	a5,456
+  24:	00f12623          	sw	a5,12(sp)
+  28:	00812783          	lw	a5,8(sp)
+  2c:	00c12703          	lw	a4,12(sp)
+  30:	00412883          	lw	a7,4(sp)
+  34:	3e700513          	li	a0,999
+  38:	02e787b3          	mul	a5,a5,a4
+  3c:	00100693          	li	a3,1
+  40:	30900593          	li	a1,777
+  44:	80000637          	lui	a2,0x80000
+  48:	fff64813          	not	a6,a2
+  4c:	ffb00713          	li	a4,-5
+  50:	011787b3          	add	a5,a5,a7
+  54:	00f12223          	sw	a5,4(sp)
+  58:	00012423          	sw	zero,8(sp)
+  5c:	00a12623          	sw	a0,12(sp)
+  60:	00812783          	lw	a5,8(sp)
+  64:	00c12303          	lw	t1,12(sp)
+  68:	00412883          	lw	a7,4(sp)
+  6c:	026787b3          	mul	a5,a5,t1
+  70:	011787b3          	add	a5,a5,a7
+  74:	00f12223          	sw	a5,4(sp)
+  78:	00a12423          	sw	a0,8(sp)
+  7c:	00012623          	sw	zero,12(sp)
+  80:	00812783          	lw	a5,8(sp)
+  84:	00c12883          	lw	a7,12(sp)
+  88:	00412503          	lw	a0,4(sp)
+  8c:	031787b3          	mul	a5,a5,a7
+  90:	00a787b3          	add	a5,a5,a0
+  94:	00f12223          	sw	a5,4(sp)
+  98:	00d12423          	sw	a3,8(sp)
+  9c:	00b12623          	sw	a1,12(sp)
+  a0:	00812783          	lw	a5,8(sp)
+  a4:	00c12883          	lw	a7,12(sp)
+  a8:	00412503          	lw	a0,4(sp)
+  ac:	031787b3          	mul	a5,a5,a7
+  b0:	00a787b3          	add	a5,a5,a0
+  b4:	00f12223          	sw	a5,4(sp)
+  b8:	fff00793          	li	a5,-1
+  bc:	00f12423          	sw	a5,8(sp)
+  c0:	00b12623          	sw	a1,12(sp)
+  c4:	00812783          	lw	a5,8(sp)
+  c8:	00c12503          	lw	a0,12(sp)
+  cc:	00412583          	lw	a1,4(sp)
+  d0:	02a787b3          	mul	a5,a5,a0
+  d4:	00b787b3          	add	a5,a5,a1
+  d8:	00f12223          	sw	a5,4(sp)
+  dc:	01012423          	sw	a6,8(sp)
+  e0:	00200793          	li	a5,2
+  e4:	00f12623          	sw	a5,12(sp)
+  e8:	00812783          	lw	a5,8(sp)
+  ec:	00c12503          	lw	a0,12(sp)
+  f0:	00412583          	lw	a1,4(sp)
+  f4:	02a787b3          	mul	a5,a5,a0
+  f8:	00b787b3          	add	a5,a5,a1
+  fc:	00f12223          	sw	a5,4(sp)
+ 100:	00c12423          	sw	a2,8(sp)
+ 104:	00d12623          	sw	a3,12(sp)
+ 108:	00812783          	lw	a5,8(sp)
+ 10c:	00c12603          	lw	a2,12(sp)
+ 110:	00412683          	lw	a3,4(sp)
+ 114:	02c787b3          	mul	a5,a5,a2
+ 118:	00d787b3          	add	a5,a5,a3
+ 11c:	00f12223          	sw	a5,4(sp)
+ 120:	06400793          	li	a5,100
+ 124:	00f12423          	sw	a5,8(sp)
+ 128:	00e12623          	sw	a4,12(sp)
+ 12c:	00812783          	lw	a5,8(sp)
+ 130:	00c12603          	lw	a2,12(sp)
+ 134:	00412683          	lw	a3,4(sp)
+ 138:	02c787b3          	mul	a5,a5,a2
+ 13c:	00d787b3          	add	a5,a5,a3
+ 140:	00f12223          	sw	a5,4(sp)
+ 144:	f9c00793          	li	a5,-100
+ 148:	00f12423          	sw	a5,8(sp)
+ 14c:	00e12623          	sw	a4,12(sp)
+ 150:	00812783          	lw	a5,8(sp)
+ 154:	00c12683          	lw	a3,12(sp)
+ 158:	00412703          	lw	a4,4(sp)
+ 15c:	02d787b3          	mul	a5,a5,a3
+ 160:	00e787b3          	add	a5,a5,a4
+ 164:	00f12223          	sw	a5,4(sp)
+ 168:	00412503          	lw	a0,4(sp)
+ 16c:	01010113          	add	sp,sp,16
+ 170:	00008067          	ret

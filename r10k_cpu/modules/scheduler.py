@@ -6,6 +6,7 @@ from r10k_cpu.downstreams.alu_queue import ALUQueue
 from r10k_cpu.downstreams.lsq import LSQ, StoreBuffer
 from r10k_cpu.downstreams.register_ready import RegisterReady
 from r10k_cpu.downstreams.scheduler_down import SchedulerDownEntry
+from r10k_cpu.modules.alu import Multiply_ALU
 
 
 class Scheduler(Module):
@@ -23,6 +24,7 @@ class Scheduler(Module):
         store_buffer: StoreBuffer,
         register_ready: RegisterReady,
         alu: Module,
+        multiply_alu: Multiply_ALU,
         lsu: Module,
     ):
         """Select ready instructions from active list and LSQ for execution."""
@@ -35,6 +37,7 @@ class Scheduler(Module):
             SchedulerDownEntry(
                 alu_selection=alu_selection,
                 alu=alu,
+                multiply_alu=multiply_alu,
                 alu_queue=alu_queue,
                 buffer_valid=buffer_instr.valid,
                 buffer_instr=buffer_instr,

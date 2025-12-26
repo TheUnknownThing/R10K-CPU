@@ -20,7 +20,8 @@ def test_asms():
     sys, simulator_path, verilog_path = build_cpu(
         sram_file=work_hex_path, sim_threshold=1000000
     )
-    simulator_binary, _, _ = run_quietly(build_simulator, simulator_path)
+    simulator_binary, stdout, stderr = run_quietly(build_simulator, simulator_path)
+    assert simulator_binary, f"Build simulator failed with stdout: \n{stdout}\n stderr: \n{stderr}\n"
     print(f"Simulator built at {simulator_binary}")
 
     test_cases = os.listdir(test_cases_path)
@@ -34,8 +35,8 @@ def test_asms():
 
         shutil.copyfile(hex_path, work_hex_path)
 
-        raw, _, stderr = run_quietly(run_simulator, binary_path=simulator_binary)
-        assert isinstance(raw, str), f"Run simulator failed with stderr: \n {stderr}"
+        raw, stdout, stderr = run_quietly(run_simulator, binary_path=simulator_binary)
+        assert isinstance(raw, str), f"Run simulator failed with stdout: \n{stdout}\n stderr: \n{stderr}\n"
 
         result = raw.splitlines()[-1]
         assert (

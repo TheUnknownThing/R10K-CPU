@@ -48,7 +48,7 @@ LSQEntryType = Record(
 )
 
 
-class RV32I_ALU_Code(Enum):
+class ALU_Code(Enum):
     ADD = 0
     SUB = 1
     SLL = 2
@@ -59,9 +59,38 @@ class RV32I_ALU_Code(Enum):
     SRL = 7
     OR = 8
     AND = 9
+    MUL = 10
+    MULH = 11
+    MULSU = 12
+    MULU = 13
+    DIV = 14
+    DIVU = 15
+    REM = 16
+    REMU = 17
 
 
-ALU_CODE_LEN = ceil(log2(len(RV32I_ALU_Code)))
+ALU_CODE_LEN = ceil(log2(len(ALU_Code)))
+
+
+def is_mul_op(alu_op: Value) -> Value:
+    return (
+        (alu_op == Bits(ALU_CODE_LEN)(ALU_Code.MUL.value))
+        | (alu_op == Bits(ALU_CODE_LEN)(ALU_Code.MULH.value))
+        | (alu_op == Bits(ALU_CODE_LEN)(ALU_Code.MULSU.value))
+        | (alu_op == Bits(ALU_CODE_LEN)(ALU_Code.MULU.value))
+    )
+
+
+def is_div_op(alu_op: Value) -> Value:
+    return (alu_op == Bits(ALU_CODE_LEN)(ALU_Code.DIV.value)) | (
+        alu_op == Bits(ALU_CODE_LEN)(ALU_Code.DIVU.value)
+    )
+
+
+def is_rem_op(alu_op: Value) -> Value:
+    return (alu_op == Bits(ALU_CODE_LEN)(ALU_Code.REM.value)) | (
+        alu_op == Bits(ALU_CODE_LEN)(ALU_Code.REMU.value)
+    )
 
 
 class OperantFrom(Enum):

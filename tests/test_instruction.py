@@ -7,7 +7,7 @@ from assassyn.backend import elaborate
 from assassyn.utils import run_simulator
 from tests.utils import run_quietly
 
-from r10k_cpu.instruction import select_instruction_args, RV32I_ALU_Code, OperantFrom, MemoryOpType
+from r10k_cpu.instruction import select_instruction_args, ALU_Code, OperantFrom, MemoryOpType
 
 @dataclass
 class InstructionTestCase:
