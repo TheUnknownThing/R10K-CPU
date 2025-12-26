@@ -24,7 +24,7 @@ def sext(value: Value, target_type: DType) -> Value:
 
 def attach_context(value: Value) -> Value:
     """Attach context information to a value. Use for conditional control flow."""
-    return value | value
+    return value.bitcast(value.dtype)
 
 
 def replace_bundle(bundle: RecordValue | ArrayRead, **kwargs) -> RecordValue:

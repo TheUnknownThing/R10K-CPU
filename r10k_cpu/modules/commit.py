@@ -3,6 +3,7 @@ from dataclass.circular_queue import CircularQueue
 from r10k_cpu.common import ROBEntryType
 from r10k_cpu.downstreams.fetcher_impl import FetcherFlushEntry
 from r10k_cpu.downstreams.map_table import MapTable
+from r10k_cpu.utils import attach_context
 
 
 class Commit(Module):
@@ -39,6 +40,13 @@ class Commit(Module):
 
         wait_until(has_active_entries)
 
+        # Downstream can sometimes get valid data before wait_until even if wait_until is triggered in varilator, which causes inconsistent behavior with simulator.
+        front_entry = ROBEntryType.view(active_list_queue.front())
+        retire_with_dest = attach_context(retire_with_dest)
+        is_branch = attach_context(is_branch)
+        mispredict = attach_context(mispredict)
+        flush_recover = attach_context(flush_recover)
+
         commit_write_enable = retire_with_dest
         commit_logical = retire_with_dest.select(front_entry.dest_logical, Bits(5)(0))
         commit_physical = retire_with_dest.select(
@@ -62,7 +70,11 @@ class Commit(Module):
         out_branch = front_entry.ready & is_branch
 
         # Because physical register 0 is reserved, we do not push it back to the free list. And when the register is first allocated, its old_physical is 0.
-        need_push_freelist = front_entry.ready & front_entry.has_dest & (front_entry.dest_old_physical != Bits(6)(0))
+        need_push_freelist = (
+            front_entry.ready
+            & front_entry.has_dest
+            & (front_entry.dest_old_physical != Bits(6)(0))
+        )
         need_pop_activelist = front_entry.ready
 
         with Condition(need_pop_activelist):
@@ -83,8 +95,8 @@ class Commit(Module):
         return (
             need_push_freelist,
             need_pop_activelist,
-            front_entry.ready & front_entry.is_alu, # ALU pop enable
-            front_entry.ready & ~front_entry.is_alu, # LSQ pop enable
+            front_entry.ready & front_entry.is_alu,  # ALU pop enable
+            front_entry.ready & ~front_entry.is_alu,  # LSQ pop enable
             retire_with_dest.select(front_entry.dest_old_physical, Bits(6)(0)),
             commit_write_enable,
             commit_logical,
