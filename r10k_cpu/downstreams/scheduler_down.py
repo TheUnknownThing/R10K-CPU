@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from assassyn.frontend import *
 from assassyn.ir.dtype import RecordValue
 from dataclass.circular_queue import CircularQueueSelection
-from r10k_cpu.common import ALU_CODE_LEN, ALU_Code
+from r10k_cpu.common import is_div_op, is_mul_op, is_rem_op
 from r10k_cpu.downstreams.alu_queue import ALUQueue
 from r10k_cpu.downstreams.lsq import LSQ
 from r10k_cpu.modules.alu import Multiply_ALU
@@ -31,42 +31,11 @@ class SchedulerDown(Downstream):
         buffer_valid = entry.buffer_valid.optional(Bits(1)(0))
 
         with Condition(entry.alu_selection.valid.optional(Bits(1)(0)) & ~flush):
-            is_mul = (
-                (
-                    entry.alu_selection.data.alu_op
-                    == Bits(ALU_CODE_LEN)(ALU_Code.MUL.value)
-                )
-                | (
-                    entry.alu_selection.data.alu_op
-                    == Bits(ALU_CODE_LEN)(ALU_Code.MULH.value)
-                )
-                | (
-                    entry.alu_selection.data.alu_op
-                    == Bits(ALU_CODE_LEN)(ALU_Code.MULSU.value)
-                )
-                | (
-                    entry.alu_selection.data.alu_op
-                    == Bits(ALU_CODE_LEN)(ALU_Code.MULU.value)
-                )
+            is_mul = is_mul_op(entry.alu_selection.data.alu_op)
+            is_div_or_rem = is_div_op(entry.alu_selection.data.alu_op) | is_rem_op(
+                entry.alu_selection.data.alu_op
             )
-            is_div_or_rem = (
-                (
-                    entry.alu_selection.data.alu_op
-                    == Bits(ALU_CODE_LEN)(ALU_Code.DIV.value)
-                )
-                | (
-                    entry.alu_selection.data.alu_op
-                    == Bits(ALU_CODE_LEN)(ALU_Code.DIVU.value)
-                )
-                | (
-                    entry.alu_selection.data.alu_op
-                    == Bits(ALU_CODE_LEN)(ALU_Code.REM.value)
-                )
-                | (
-                    entry.alu_selection.data.alu_op
-                    == Bits(ALU_CODE_LEN)(ALU_Code.REMU.value)
-                )
-            )
+
             issue_mul_alu = is_mul | (is_div_or_rem & ~entry.multiply_alu.div_busy[0])
             issue_alu = ~(is_mul | is_div_or_rem)
 
@@ -76,14 +45,13 @@ class SchedulerDown(Downstream):
                 )
                 alu_call.bind.set_fifo_depth(instr=1)
                 entry.multiply_alu.div_busy[0] = is_div_or_rem
-                
+
             with Condition(issue_alu):
                 alu_call = entry.alu.async_called(instr=entry.alu_selection.data)
                 alu_call.bind.set_fifo_depth(instr=1)
 
             with Condition(issue_alu | issue_mul_alu):
                 entry.alu_queue.mark_issued(index=entry.alu_selection.index)
-
 
         issue_lsq = (
             entry.lsq_selection.valid.optional(Bits(1)(0)) & ~buffer_valid & ~flush

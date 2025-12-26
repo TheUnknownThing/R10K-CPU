@@ -11,6 +11,8 @@ from r10k_cpu.common import (
     OPERANT_FROM_LEN,
     ALU_Code,
     OperantFrom,
+    is_div_op,
+    is_mul_op,
 )
 from r10k_cpu.downstreams.active_list import ActiveList
 from r10k_cpu.downstreams.register_ready import RegisterReady
@@ -321,9 +323,7 @@ class Multiply_ALU(Module):
                 final_quotient = quotient_sign.select(utils.neg(quotient), quotient)
                 final_remainder = remainder_sign.select(utils.neg(remainder), remainder)
 
-                is_div = (instr.alu_op == Bits(ALU_CODE_LEN)(ALU_Code.DIV.value)) | (
-                    instr.alu_op == Bits(ALU_CODE_LEN)(ALU_Code.DIVU.value)
-                )
+                is_div = is_div_op(instr.alu_op) # pyright: ignore[reportArgumentType]
                 result = is_div.select(final_quotient, final_remainder)
 
                 update_register(flush, instr, result)
@@ -342,12 +342,7 @@ class Multiply_ALU(Module):
 
         divider.build(flush=flush, update_register=update_register_for_div)
 
-        is_mul = (
-            (instr.alu_op == Bits(ALU_CODE_LEN)(ALU_Code.MUL.value))
-            | (instr.alu_op == Bits(ALU_CODE_LEN)(ALU_Code.MULH.value))
-            | (instr.alu_op == Bits(ALU_CODE_LEN)(ALU_Code.MULSU.value))
-            | (instr.alu_op == Bits(ALU_CODE_LEN)(ALU_Code.MULU.value))
-        )
+        is_mul = is_mul_op(instr.alu_op)
 
         with Condition(flush[0]):
             self.div_busy[0] = Bits(1)(0)
@@ -362,13 +357,13 @@ class Multiply_ALU(Module):
 
             is_signed = is_div | is_rem
 
-            is_divider_zero = op_b == Bits(32)(0)
+            is_divisor_zero = op_b == Bits(32)(0)
             is_overflow = (
                 (op_a == Bits(32)(0x80000000))
                 & (op_b == Bits(32)(0xFFFFFFFF))
                 & is_signed
             )
-            with Condition(is_divider_zero):
+            with Condition(is_divisor_zero):
                 is_div_like = is_div | is_divu
                 update_register_for_div(
                     flush, instr, is_div_like.select(Bits(32)(0xFFFFFFFF), op_a)
@@ -383,7 +378,7 @@ class Multiply_ALU(Module):
             is_quotient_negative = (op_a[31:31] ^ op_b[31:31]) & is_signed
             is_remainder_negative = op_a[31:31] & is_signed
 
-            with Condition(~is_divider_zero & ~is_overflow):
+            with Condition(~is_divisor_zero & ~is_overflow):
                 divider.async_called(
                     instr=instr,
                     op_a=abs_op_a,

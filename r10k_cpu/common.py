@@ -68,7 +68,29 @@ class ALU_Code(Enum):
     REM = 16
     REMU = 17
 
+
 ALU_CODE_LEN = ceil(log2(len(ALU_Code)))
+
+
+def is_mul_op(alu_op: Value) -> Value:
+    return (
+        (alu_op == Bits(ALU_CODE_LEN)(ALU_Code.MUL.value))
+        | (alu_op == Bits(ALU_CODE_LEN)(ALU_Code.MULH.value))
+        | (alu_op == Bits(ALU_CODE_LEN)(ALU_Code.MULSU.value))
+        | (alu_op == Bits(ALU_CODE_LEN)(ALU_Code.MULU.value))
+    )
+
+
+def is_div_op(alu_op: Value) -> Value:
+    return (alu_op == Bits(ALU_CODE_LEN)(ALU_Code.DIV.value)) | (
+        alu_op == Bits(ALU_CODE_LEN)(ALU_Code.DIVU.value)
+    )
+
+
+def is_rem_op(alu_op: Value) -> Value:
+    return (alu_op == Bits(ALU_CODE_LEN)(ALU_Code.REM.value)) | (
+        alu_op == Bits(ALU_CODE_LEN)(ALU_Code.REMU.value)
+    )
 
 
 class OperantFrom(Enum):
