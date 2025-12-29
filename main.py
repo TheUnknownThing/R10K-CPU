@@ -1,7 +1,7 @@
+from typing import Callable
 from assassyn.frontend import *
 from assassyn.backend import *
 from assassyn import utils
-from typing import List
 
 from r10k_cpu.downstreams.fetcher_impl import FetcherImpl
 from r10k_cpu.downstreams.free_list import FreeList
@@ -11,8 +11,8 @@ from r10k_cpu.downstreams.lsq import LSQ, StoreBuffer
 from r10k_cpu.downstreams.map_table import MapTable, MapTableWriteEntry
 from r10k_cpu.downstreams.register_ready import RegisterReady
 from r10k_cpu.downstreams.predictor import (
-    AlwaysBranchPredictor,
-    PredictFeedback,
+    BinaryPredictState,
+    BinaryPredictor,
     Predictor,
 )
 from r10k_cpu.downstreams.scheduler_down import SchedulerDown
@@ -26,7 +26,6 @@ from r10k_cpu.modules.alu import ALU, Multiply_ALU
 from r10k_cpu.modules.writeback import WriteBack
 from r10k_cpu.modules.scheduler import Scheduler
 
-from r10k_cpu.common import LSQEntryType
 
 
 def build_cpu(
@@ -35,6 +34,9 @@ def build_cpu(
     resource_base: str = os.getcwd(),
     sim_threshold: int = 20480,
     idle_threshold: int = 20480,
+    predictor_factory: Callable[[], Predictor] = lambda: BinaryPredictor(
+        4, BinaryPredictState.WeaklyNo
+    ),
 ):
     """Build and elaborate the Naive memory-capable RV32I CPU."""
 
@@ -61,7 +63,7 @@ def build_cpu(
         speculation_state = SpeculationState()
         scheduler = Scheduler()
         scheduler_down = SchedulerDown()
-        predictor: Predictor = AlwaysBranchPredictor()
+        predictor: Predictor = predictor_factory()
 
         physical_register_file = RegArray(Bits(32), 64, initializer=[0] * 64)
         # Tracks readiness of each physical register; packed so we can atomically reset on flush.
@@ -92,6 +94,7 @@ def build_cpu(
             flush_recover,
             fetcher_flush_entry,
             out_branch,
+            predict_feedback,
         ) = commit.build(
             active_list_queue=active_list.queue,
             map_table=map_table,
@@ -155,15 +158,7 @@ def build_cpu(
             register_ready,
         )
 
-        # TODO: Branch prediction is temporarily always jump
-        predict_branch = predictor.build(
-            alu_queue_entry.PC,
-            PredictFeedback(
-                Bits(32)(0),
-                Bits(1)(0),
-                Bits(1)(0),
-            ),
-        )
+        predict_branch = predictor.build(alu_queue_entry.PC, predict_feedback)
 
         fetcher_impl.build(
             PC_reg=PC_reg,
@@ -250,13 +245,13 @@ def build_cpu(
 
 if __name__ == "__main__":
     sys, simulator_path, verilog_path = build_cpu(
-        sram_file="asms/sum100/sum100.hex",
+        sram_file="asms/bubble_sort/bubble_sort.hex",
         verilog=True,
         sim_threshold=3000,
     )
     sim_output = utils.run_simulator(simulator_path)
-    with open("out/sum100_sim.out", "w") as f:
+    with open("out/bubble_sort_sim.out", "w") as f:
         f.write(sim_output)
     ver_output = utils.run_verilator(verilog_path)
-    with open("out/sum100_ver.out", "w") as f:
+    with open("out/bubble_sort_ver.out", "w") as f:
         f.write(ver_output)

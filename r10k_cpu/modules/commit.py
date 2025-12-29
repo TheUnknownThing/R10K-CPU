@@ -3,6 +3,7 @@ from dataclass.circular_queue import CircularQueue
 from r10k_cpu.common import ROBEntryType
 from r10k_cpu.downstreams.fetcher_impl import FetcherFlushEntry
 from r10k_cpu.downstreams.map_table import MapTable
+from r10k_cpu.downstreams.predictor import PredictFeedback
 from r10k_cpu.utils import attach_context
 
 
@@ -92,6 +93,13 @@ class Commit(Module):
             ]
             log(log_format, front_entry.pc, *new_regs)
 
+        with Condition(out_branch):
+            predict_feedback = PredictFeedback(
+                front_entry.pc,
+                front_entry.actual_branch,
+                front_entry.predict_branch,
+            )
+
         return (
             need_push_freelist,
             need_pop_activelist,
@@ -104,4 +112,5 @@ class Commit(Module):
             flush_recover,
             fetcher_flush_entry,
             out_branch,
+            predict_feedback,
         )
