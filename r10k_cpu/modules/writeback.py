@@ -1,6 +1,7 @@
 from assassyn.frontend import *
 from r10k_cpu.downstreams.active_list import ActiveList
 from r10k_cpu.downstreams.register_ready import RegisterReady
+from r10k_cpu.modules.byte_memory import ByteAddressableMemory
 
 class WriteBack(Module):
     """Handles the write-back stage of the LSU."""
@@ -18,7 +19,7 @@ class WriteBack(Module):
         self.name = "WriteBack"
     
     @module.combinational
-    def build(self, active_list: ActiveList, register_ready: RegisterReady, physical_register_file: Array, memory: SRAM):
+    def build(self, active_list: ActiveList, register_ready: RegisterReady, physical_register_file: Array, memory: ByteAddressableMemory):
         (
             is_load, 
             is_store, 
@@ -42,12 +43,12 @@ class WriteBack(Module):
     @staticmethod
     def process_memory_data(op_type: Value, data: Value, address: Value) -> Value:
         """Process data read from memory based on operation type."""
-        byte_offset = address[0:2].zext(UInt(5))
+        byte_offset = address[0:1].zext(UInt(5))  # bits 0-1 = 2 bits
         shift_amt = (byte_offset << UInt(5)(3)).bitcast(Bits(5))
         data_shifted = (data.bitcast(UInt(32)) >> shift_amt).bitcast(Bits(32))
 
-        byte_val = data_shifted[0:8]
-        half_val = data_shifted[0:16]
+        byte_val = data_shifted[0:7]   # bits 0-7 = 8 bits
+        half_val = data_shifted[0:15]  # bits 0-15 = 16 bits
 
         res = data
         res = (op_type == Bits(3)(2)).select(data, res)  # Word
