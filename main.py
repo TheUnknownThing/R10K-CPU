@@ -25,6 +25,7 @@ from r10k_cpu.modules.lsu import LSU
 from r10k_cpu.modules.alu import ALU, Multiply_ALU
 from r10k_cpu.modules.writeback import WriteBack
 from r10k_cpu.modules.scheduler import Scheduler
+from r10k_cpu.modules.byte_memory import ByteAddressableMemory
 
 
 
@@ -72,8 +73,7 @@ def build_cpu(
         # This buffer stores store instruction that have been committed but not yet executed.
         store_buffer = StoreBuffer()
 
-        dcache = SRAM(width=32, depth=0x100000, init_file=sram_file)
-        dcache.name = "memory_data"
+        dcache = ByteAddressableMemory(depth=0x100000, init_file=sram_file)
 
         icache = SRAM(width=32, depth=0x100000, init_file=sram_file)
         icache.name = "memory_instruction"
