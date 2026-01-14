@@ -109,9 +109,12 @@ def prepare_byte_files(init_file: str) -> list[str]:
                     continue
                 if line.startswith("@"):
                     # Add segment marker to all byte files
-                    assert line[-2:] == "00", "Only support 4-byte aligned init files"
+                    addr = int(line[1:], 16)
+                    assert addr % 4 == 0, "Address in init file must be 4-byte aligned"
+                    trunc_addr = addr // 4
+                    line = f"@{trunc_addr:x}"
                     for i in range(4):
-                        byte_data[i].append(line[:-2])
+                        byte_data[i].append(line)
                     continue
                 # Parse 32-bit hex value
                 word = int(line, 16)
