@@ -249,7 +249,7 @@ if __name__ == "__main__":
     byte_files = prepare_byte_files(sram_file)
 
     sys, simulator_path, verilog_path = build_cpu(
-        sram_files= [sram_file] + byte_files,
+        sram_files= byte_files,
         verilog=True,
     )
     sim_output = utils.run_simulator(simulator_path)

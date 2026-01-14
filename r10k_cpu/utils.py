@@ -86,6 +86,7 @@ def prepare_byte_files(init_file: str) -> list[str]:
     Split a 32-bit hex file into 4 byte hex files.
 
     Given init_file = "file.hex", creates:
+    - file_bf.hex (offset truncated 32-bit words)
     - file_b0.hex (bits 7:0)
     - file_b1.hex (bits 15:8)
     - file_b2.hex (bits 23:16)
@@ -94,6 +95,7 @@ def prepare_byte_files(init_file: str) -> list[str]:
     import os
 
     base, ext = os.path.splitext(init_file)
+    offset_trunc_file = f"{base}_bf{ext}"
     byte_files = [f"{base}_b{i}{ext}" for i in range(4)]
 
     # Check if we need to regenerate
@@ -102,6 +104,7 @@ def prepare_byte_files(init_file: str) -> list[str]:
             with open(init_file, "r") as f:
                 lines = f.readlines()
 
+            trunc_data = []
             byte_data = [[], [], [], []]
             for line in lines:
                 line = line.strip()
@@ -113,6 +116,7 @@ def prepare_byte_files(init_file: str) -> list[str]:
                     assert addr % 4 == 0, "Address in init file must be 4-byte aligned"
                     trunc_addr = addr // 4
                     line = f"@{trunc_addr:x}"
+                    trunc_data.append(line)
                     for i in range(4):
                         byte_data[i].append(line)
                     continue
@@ -122,14 +126,19 @@ def prepare_byte_files(init_file: str) -> list[str]:
                 byte_data[1].append(f"{(word >> 8) & 0xFF:02x}")
                 byte_data[2].append(f"{(word >> 16) & 0xFF:02x}")
                 byte_data[3].append(f"{(word >> 24) & 0xFF:02x}")
+                trunc_data.append(f"{word:08x}")
 
             for i in range(4):
                 with open(byte_files[i], "w") as f:
                     f.write("\n".join(byte_data[i]))
                     if byte_data[i]:
                         f.write("\n")
+            with open(offset_trunc_file, "w") as f:
+                f.write("\n".join(trunc_data))
+                if trunc_data:
+                    f.write("\n")
         except Exception as e:
             print(f"Error processing init file {init_file}: {e}")
             raise
 
-    return byte_files
+    return [offset_trunc_file] + byte_files
