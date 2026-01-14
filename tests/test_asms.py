@@ -67,7 +67,7 @@ def test_asms():
 def test_asms_verilator():
     work_hex_paths = [
         os.path.join(work_path, fname)
-        for fname in ["exe.hex", "exe_b0.hex", "exe_b1.hex", "exe_b2.hex", "exe_b3.hex"]
+        for fname in ["exe_bf.hex", "exe_b0.hex", "exe_b1.hex", "exe_b2.hex", "exe_b3.hex"]
     ]
 
     os.makedirs(work_path, exist_ok=True)
