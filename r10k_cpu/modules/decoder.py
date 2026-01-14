@@ -59,6 +59,9 @@ class Decoder(Module):
             & (~args.is_branch | ~speculation_state.speculating[0])
         )
 
+        # Check for halt instruction (sb x0, -1(x0))
+        args.is_terminator |= instruction == Bits(32)(0b1111111_00000_00000_000_11111_0100011)
+
         with Condition(dest_valid):
             register_ready.mark_not_ready(physical_rd, enable=dest_valid)
 

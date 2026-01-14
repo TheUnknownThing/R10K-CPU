@@ -2,6 +2,6 @@
 _start:
     li sp, 0x10000
     call main 
-    ebreak
+    sb x0, -1(x0)
 1: 
     j 1b
