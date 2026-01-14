@@ -7,7 +7,7 @@ Disassembly of section .text:
 00000000 <_start>:
    0:	00010137          	lui	sp,0x10
    4:	00c000ef          	jal	10 <main>
-   8:	00100073          	ebreak
+   8:	fe000fa3          	sb	zero,-1(zero) # ffffffff <byte_buf+0xffffff3b>
    c:	0000006f          	j	c <_start+0xc>
 
 00000010 <main>:

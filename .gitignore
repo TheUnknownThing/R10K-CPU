@@ -16,3 +16,4 @@ test.py
 tmp/
 out/
 .build_cache.json
+asms/**/*_b?.hex

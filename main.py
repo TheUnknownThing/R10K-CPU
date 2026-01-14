@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Sequence
 from assassyn.frontend import *
 from assassyn.backend import *
 from assassyn import utils
@@ -26,11 +26,12 @@ from r10k_cpu.modules.alu import ALU, Multiply_ALU
 from r10k_cpu.modules.writeback import WriteBack
 from r10k_cpu.modules.scheduler import Scheduler
 from r10k_cpu.modules.byte_memory import ByteAddressableMemory
+from r10k_cpu.utils import prepare_byte_files
 
 
 
 def build_cpu(
-    sram_file: str | None = None,
+    sram_files: Sequence[str | None]= [None, None, None, None, None],
     verilog: bool = False,
     resource_base: str = os.getcwd(),
     sim_threshold: int = 20480,
@@ -73,9 +74,9 @@ def build_cpu(
         # This buffer stores store instruction that have been committed but not yet executed.
         store_buffer = StoreBuffer()
 
-        dcache = ByteAddressableMemory(depth=0x100000, init_file=sram_file)
+        dcache = ByteAddressableMemory(depth=0x100000, byte_files=sram_files[1:])
 
-        icache = SRAM(width=32, depth=0x100000, init_file=sram_file)
+        icache = SRAM(width=32, depth=0x100000, init_file=sram_files[0])
         icache.name = "memory_instruction"
 
         PC_reg, PC_addr = fetcher.build()
@@ -244,8 +245,11 @@ def build_cpu(
 
 
 if __name__ == "__main__":
+    sram_file = "asms/bubble_sort/bubble_sort.hex"
+    byte_files = prepare_byte_files(sram_file)
+
     sys, simulator_path, verilog_path = build_cpu(
-        sram_file="asms/bubble_sort/bubble_sort.hex",
+        sram_files= [sram_file] + byte_files,
         verilog=True,
         sim_threshold=3000,
     )

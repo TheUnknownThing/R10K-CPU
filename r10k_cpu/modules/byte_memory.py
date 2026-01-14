@@ -5,6 +5,7 @@ This module wraps 4 separate 8-bit SRAMs to form a 32-bit word-addressable
 memory that supports byte, halfword, and word store operations.
 """
 
+from typing import Sequence
 from assassyn.frontend import *
 from r10k_cpu.common import MemoryOpType, MEMORY_OP_TYPE_LEN
 
@@ -27,14 +28,9 @@ class ByteAddressableMemory(Downstream):
     use a preprocessing step to split the original hex file.
     """
     
-    def __init__(self, depth: int, init_file: str | None = None):
+    def __init__(self, depth: int, byte_files: Sequence[str | None]= [None, None, None, None]):
         super().__init__()
         self.depth = depth
-        self.init_file = init_file
-        
-        byte_files = [None, None, None, None]
-        if init_file is not None:
-            byte_files = self._prepare_byte_files(init_file)
         
         # Create 4 byte-wide SRAMs
         self.byte0 = SRAM(width=8, depth=depth, init_file=byte_files[0])
@@ -46,49 +42,6 @@ class ByteAddressableMemory(Downstream):
         self.byte1.name = "byte_mem_1"
         self.byte2.name = "byte_mem_2"
         self.byte3.name = "byte_mem_3"
-    
-    def _prepare_byte_files(self, init_file: str) -> list:
-        """
-        Split a 32-bit hex file into 4 byte hex files.
-        
-        Given init_file = "file.hex", creates:
-        - file_b0.hex (bits 7:0)
-        - file_b1.hex (bits 15:8)
-        - file_b2.hex (bits 23:16)
-        - file_b3.hex (bits 31:24)
-        """
-        import os
-        
-        base, ext = os.path.splitext(init_file)
-        byte_files = [f"{base}_b{i}{ext}" for i in range(4)]
-        
-        # Check if we need to regenerate
-        if os.path.exists(init_file):
-            try:
-                with open(init_file, 'r') as f:
-                    lines = f.readlines()
-                
-                byte_data = [[], [], [], []]
-                for line in lines:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    # Parse 32-bit hex value
-                    word = int(line, 16)
-                    byte_data[0].append(f"{(word >> 0) & 0xFF:02x}")
-                    byte_data[1].append(f"{(word >> 8) & 0xFF:02x}")
-                    byte_data[2].append(f"{(word >> 16) & 0xFF:02x}")
-                    byte_data[3].append(f"{(word >> 24) & 0xFF:02x}")
-                
-                for i in range(4):
-                    with open(byte_files[i], 'w') as f:
-                        f.write('\n'.join(byte_data[i]))
-                        if byte_data[i]:
-                            f.write('\n')
-            except Exception as e:
-                return [None, None, None, None]
-        
-        return byte_files
     
     @downstream.combinational
     def build(

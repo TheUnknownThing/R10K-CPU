@@ -67,7 +67,7 @@ def leading_zero_count(value: Value, *, trailing: bool = False) -> Value:
             return UInt(bit_count)(0)
         if left + 1 == right:
             if trailing:
-                return (~value[left : left]).zext(UInt(bit_count))
+                return (~value[left:left]).zext(UInt(bit_count))
             else:
                 return (~value[bits - 1 - left : bits - 1 - left]).zext(UInt(bit_count))
         mid = (left + right) // 2
@@ -79,3 +79,54 @@ def leading_zero_count(value: Value, *, trailing: bool = False) -> Value:
         )
 
     return recursive(0, bits)
+
+
+def prepare_byte_files(init_file: str) -> list[str]:
+    """
+    Split a 32-bit hex file into 4 byte hex files.
+
+    Given init_file = "file.hex", creates:
+    - file_b0.hex (bits 7:0)
+    - file_b1.hex (bits 15:8)
+    - file_b2.hex (bits 23:16)
+    - file_b3.hex (bits 31:24)
+    """
+    import os
+
+    base, ext = os.path.splitext(init_file)
+    byte_files = [f"{base}_b{i}{ext}" for i in range(4)]
+
+    # Check if we need to regenerate
+    if os.path.exists(init_file):
+        try:
+            with open(init_file, "r") as f:
+                lines = f.readlines()
+
+            byte_data = [[], [], [], []]
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                if line.startswith("@"):
+                    # Add segment marker to all byte files
+                    assert line[-2:] == "00", "Only support 4-byte aligned init files"
+                    for i in range(4):
+                        byte_data[i].append(line[:-2])
+                    continue
+                # Parse 32-bit hex value
+                word = int(line, 16)
+                byte_data[0].append(f"{(word >> 0) & 0xFF:02x}")
+                byte_data[1].append(f"{(word >> 8) & 0xFF:02x}")
+                byte_data[2].append(f"{(word >> 16) & 0xFF:02x}")
+                byte_data[3].append(f"{(word >> 24) & 0xFF:02x}")
+
+            for i in range(4):
+                with open(byte_files[i], "w") as f:
+                    f.write("\n".join(byte_data[i]))
+                    if byte_data[i]:
+                        f.write("\n")
+        except Exception as e:
+            print(f"Error processing init file {init_file}: {e}")
+            raise
+
+    return byte_files
