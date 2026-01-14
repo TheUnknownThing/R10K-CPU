@@ -245,17 +245,16 @@ def build_cpu(
 
 
 if __name__ == "__main__":
-    sram_file = "asms/bubble_sort/bubble_sort.hex"
+    sram_file = "asms/math_comprehensive/math_comprehensive.hex"
     byte_files = prepare_byte_files(sram_file)
 
     sys, simulator_path, verilog_path = build_cpu(
         sram_files= [sram_file] + byte_files,
         verilog=True,
-        sim_threshold=3000,
     )
     sim_output = utils.run_simulator(simulator_path)
-    with open("out/bubble_sort_sim.out", "w") as f:
+    with open("out/math_comprehensive_sim.out", "w") as f:
         f.write(sim_output)
     ver_output = utils.run_verilator(verilog_path)
-    with open("out/bubble_sort_ver.out", "w") as f:
+    with open("out/math_comprehensive_ver.out", "w") as f:
         f.write(ver_output)

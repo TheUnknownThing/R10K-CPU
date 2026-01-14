@@ -18,16 +18,12 @@ class LSU(Module):
         load_active = (instr.is_load & instr.valid).bitcast(Bits(1))
         need_update_active_list = load_active # store instruction always has ready bit.
 
-        # Compute the full byte address
         full_addr = (physical_register_file[instr.rs1_physical].bitcast(Int(32)) + instr.imm.bitcast(Int(32))).bitcast(Bits(32))
-        # Word address (bits [31:2])
         word_addr = full_addr[2:31].zext(Bits(32))
-        # Byte offset within the word (bits [1:0])
         byte_offset = full_addr[0:1]
         
         val = store_active.select(physical_register_file[instr.rs2_physical], Bits(32)(0))
 
-        # Use ByteAddressableMemory which handles byte/halfword/word stores
         memory.build(
             we=store_active,
             re=load_active,

@@ -90,6 +90,7 @@ class ALU(Module):
         branch_taken = branch_valid & branch_core
 
         with Condition(instr.valid):
+            log("ALU Executing PC: 0x{:08X}", instr.PC)
             # We always pass actual_branch here, but it only matters when is_branch is true
             active_list_index = instr.active_list_idx
             active_list.set_ready(
@@ -172,6 +173,7 @@ class Multiply_ALU(Module):
             self.products[i][0] = products[i]
 
         def update_register(flush, instr, result):
+            log("ALU Executing PC: 0x{:08X}", instr.PC)
             physical_register_file[instr.rd_physical] = result
 
             register_ready.mark_ready(

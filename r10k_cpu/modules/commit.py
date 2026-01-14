@@ -93,9 +93,10 @@ class Commit(Module):
         #     ]
         #     log(log_format, front_entry.pc, *new_regs)
 
-        with Condition(front_entry.is_terminator): 
-            log("PC=0x{:08X}, x10=0x{:08X}", front_entry.pc, register_file[map_table.read_commit(Bits(5)(10))])
-            finish()
+        with Condition(need_pop_activelist): 
+            log("PC=0x{:08X}, x10=0x{:08X}, ROB Entry Count=0x{:08X}", front_entry.pc, register_file[map_table.read_commit(Bits(5)(10))], active_list_queue.get_count())
+            with Condition(front_entry.is_terminator):
+                finish()
 
         with Condition(out_branch):
             predict_feedback = PredictFeedback(

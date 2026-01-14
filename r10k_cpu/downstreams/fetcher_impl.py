@@ -46,6 +46,7 @@ class FetcherImpl(Downstream):
         )
 
         PC_reg[0] = new_PC
+
         self.stalled[0] = new_stalled
 
         icache.build(
@@ -53,5 +54,6 @@ class FetcherImpl(Downstream):
         )
 
         with Condition(~new_stalled):
+            log("New PC: 0x{:08X}", new_PC)
             decoder_call = decoder.async_called(PC=new_PC)
             decoder_call.bind.set_fifo_depth(PC=1)

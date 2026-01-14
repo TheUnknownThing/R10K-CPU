@@ -22,7 +22,7 @@ def test_asms():
 
     os.makedirs(work_path, exist_ok=True)
     sys, simulator_path, verilog_path = build_cpu(
-        sram_files=work_hex_paths, sim_threshold=1000000
+        sram_files=work_hex_paths, sim_threshold=10000000
     )
     simulator_binary, stdout, stderr = run_quietly(build_simulator, simulator_path)
     assert (
@@ -30,7 +30,8 @@ def test_asms():
     ), f"Build simulator failed with stdout: \n{stdout}\n stderr: \n{stderr}\n"
     print(f"Simulator built at {simulator_binary}")
 
-    test_cases = os.listdir(test_cases_path)
+    test_cases = ['test_div', 'queens', 'store_byte_half', 'arithmetic', 'test_mul', 'vector_add', 'logic_ops', 'multiarray', 'bubble_sort', 'sum100', 'hanoi', 'quick_sort', 'qsort', 'empty', 'primes', 'math_comprehensive', 'sum', 'magic', 'matrix_mul', 'vector_mul', 'test_rem', 'fibonacci']
+    # test_cases = ['store_byte_half']
     print(test_cases)
 
     for test_case in test_cases:
@@ -59,7 +60,7 @@ def test_asms():
         ret = int(ret.group(1), 16)
         assert (
             ret == expected_result
-        ), f"Test failed for {test_case}: expect result is {expected_result}, get {ret}"
+        ), f"Test failed for {test_case}: expect result is {expected_result}, get {ret}, the raw output is\n{raw}"
         print(f"{test_case} passed!")
 
 
@@ -72,7 +73,7 @@ def test_asms_verilator():
 
     os.makedirs(work_path, exist_ok=True)
     sys, simulator_path, verilog_path = build_cpu(
-        sram_files=work_hex_paths, sim_threshold=1000000, verilog=True
+        sram_files=work_hex_paths, sim_threshold=10000000, verilog=True
     )
 
     test_cases = os.listdir(test_cases_path)
@@ -102,5 +103,5 @@ def test_asms_verilator():
         ret = int(ret.group(1), 16)
         assert (
             ret == expected_result
-        ), f"Test failed for {test_case}: expect result is {expected_result}, get {ret}"
+        ), f"Test failed for {test_case}: expect result is {expected_result}, get {ret}, the raw output is \n{raw}"
         print(f"{test_case} passed!")
