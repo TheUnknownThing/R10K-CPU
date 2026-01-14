@@ -1,0 +1,215 @@
+
+asms/multiarray/multiarray.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00000000 <_start>:
+   0:	00010137          	lui	sp,0x10
+   4:	05c000ef          	jal	60 <main>
+   8:	fe000fa3          	sb	zero,-1(zero) # ffffffff <judgeResult+0xfffffbfb>
+   c:	0000006f          	j	c <_start+0xc>
+
+00000010 <printInt>:
+  10:	40402703          	lw	a4,1028(zero) # 404 <judgeResult>
+  14:	00e54533          	xor	a0,a0,a4
+  18:	0ad50513          	add	a0,a0,173
+  1c:	40a02223          	sw	a0,1028(zero) # 404 <judgeResult>
+  20:	00008067          	ret
+
+00000024 <printStr>:
+  24:	00054703          	lbu	a4,0(a0)
+  28:	02070063          	beqz	a4,48 <printStr+0x24>
+  2c:	40402783          	lw	a5,1028(zero) # 404 <judgeResult>
+  30:	00f747b3          	xor	a5,a4,a5
+  34:	20978793          	add	a5,a5,521
+  38:	40f02223          	sw	a5,1028(zero) # 404 <judgeResult>
+  3c:	00154703          	lbu	a4,1(a0)
+  40:	00150513          	add	a0,a0,1
+  44:	fe0716e3          	bnez	a4,30 <printStr+0xc>
+  48:	00008067          	ret
+
+0000004c <printNum>:
+  4c:	40402703          	lw	a4,1028(zero) # 404 <judgeResult>
+  50:	00e54533          	xor	a0,a0,a4
+  54:	0ad50513          	add	a0,a0,173
+  58:	40a02223          	sw	a0,1028(zero) # 404 <judgeResult>
+  5c:	00008067          	ret
+
+00000060 <main>:
+  60:	40402783          	lw	a5,1028(zero) # 404 <judgeResult>
+  64:	32400713          	li	a4,804
+  68:	3787c793          	xor	a5,a5,888
+  6c:	15a78793          	add	a5,a5,346
+  70:	0017c793          	xor	a5,a5,1
+  74:	0ad78793          	add	a5,a5,173
+  78:	0027c793          	xor	a5,a5,2
+  7c:	0ad78793          	add	a5,a5,173
+  80:	0037c793          	xor	a5,a5,3
+  84:	0ad78793          	add	a5,a5,173
+  88:	0047c793          	xor	a5,a5,4
+  8c:	0ad78793          	add	a5,a5,173
+  90:	0057c793          	xor	a5,a5,5
+  94:	0ad78793          	add	a5,a5,173
+  98:	0067c793          	xor	a5,a5,6
+  9c:	0ad78793          	add	a5,a5,173
+  a0:	0077c793          	xor	a5,a5,7
+  a4:	0ad78793          	add	a5,a5,173
+  a8:	0087c793          	xor	a5,a5,8
+  ac:	0ad78793          	add	a5,a5,173
+  b0:	0097c793          	xor	a5,a5,9
+  b4:	0ad78793          	add	a5,a5,173
+  b8:	00a7c793          	xor	a5,a5,10
+  bc:	0ad78793          	add	a5,a5,173
+  c0:	00b7c793          	xor	a5,a5,11
+  c4:	0ad78793          	add	a5,a5,173
+  c8:	00c7c793          	xor	a5,a5,12
+  cc:	0ad78793          	add	a5,a5,173
+  d0:	00d7c793          	xor	a5,a5,13
+  d4:	0ad78793          	add	a5,a5,173
+  d8:	00e7c793          	xor	a5,a5,14
+  dc:	0ad78793          	add	a5,a5,173
+  e0:	00f7c793          	xor	a5,a5,15
+  e4:	0ad78793          	add	a5,a5,173
+  e8:	0107c793          	xor	a5,a5,16
+  ec:	0ad78793          	add	a5,a5,173
+  f0:	0117c793          	xor	a5,a5,17
+  f4:	0ad78793          	add	a5,a5,173
+  f8:	0127c793          	xor	a5,a5,18
+  fc:	0ad78793          	add	a5,a5,173
+ 100:	0137c793          	xor	a5,a5,19
+ 104:	0ad78793          	add	a5,a5,173
+ 108:	fff00613          	li	a2,-1
+ 10c:	0147c793          	xor	a5,a5,20
+ 110:	00c72423          	sw	a2,8(a4)
+ 114:	00c72823          	sw	a2,16(a4)
+ 118:	00c72c23          	sw	a2,24(a4)
+ 11c:	02c72023          	sw	a2,32(a4)
+ 120:	0ad78793          	add	a5,a5,173
+ 124:	00100613          	li	a2,1
+ 128:	02c72623          	sw	a2,44(a4)
+ 12c:	0157c793          	xor	a5,a5,21
+ 130:	00200613          	li	a2,2
+ 134:	02c72823          	sw	a2,48(a4)
+ 138:	0ad78793          	add	a5,a5,173
+ 13c:	00300613          	li	a2,3
+ 140:	02c72a23          	sw	a2,52(a4)
+ 144:	0167c793          	xor	a5,a5,22
+ 148:	00500613          	li	a2,5
+ 14c:	02c72e23          	sw	a2,60(a4)
+ 150:	0ad78793          	add	a5,a5,173
+ 154:	00600613          	li	a2,6
+ 158:	04c72023          	sw	a2,64(a4)
+ 15c:	0177c793          	xor	a5,a5,23
+ 160:	00700613          	li	a2,7
+ 164:	04c72223          	sw	a2,68(a4)
+ 168:	0ad78793          	add	a5,a5,173
+ 16c:	00800613          	li	a2,8
+ 170:	04c72423          	sw	a2,72(a4)
+ 174:	0187c793          	xor	a5,a5,24
+ 178:	00900613          	li	a2,9
+ 17c:	04c72623          	sw	a2,76(a4)
+ 180:	0ad78793          	add	a5,a5,173
+ 184:	00b00613          	li	a2,11
+ 188:	04c72c23          	sw	a2,88(a4)
+ 18c:	0197c793          	xor	a5,a5,25
+ 190:	00c00613          	li	a2,12
+ 194:	04c72e23          	sw	a2,92(a4)
+ 198:	0ad78793          	add	a5,a5,173
+ 19c:	00d00613          	li	a2,13
+ 1a0:	06c72023          	sw	a2,96(a4)
+ 1a4:	01a7c793          	xor	a5,a5,26
+ 1a8:	00e00613          	li	a2,14
+ 1ac:	06c72223          	sw	a2,100(a4)
+ 1b0:	0ad78793          	add	a5,a5,173
+ 1b4:	00f00613          	li	a2,15
+ 1b8:	06c72423          	sw	a2,104(a4)
+ 1bc:	01b7c793          	xor	a5,a5,27
+ 1c0:	01000613          	li	a2,16
+ 1c4:	06c72623          	sw	a2,108(a4)
+ 1c8:	0ad78793          	add	a5,a5,173
+ 1cc:	01100613          	li	a2,17
+ 1d0:	06c72823          	sw	a2,112(a4)
+ 1d4:	01c7c793          	xor	a5,a5,28
+ 1d8:	01200613          	li	a2,18
+ 1dc:	06c72a23          	sw	a2,116(a4)
+ 1e0:	0ad78793          	add	a5,a5,173
+ 1e4:	01300613          	li	a2,19
+ 1e8:	06c72c23          	sw	a2,120(a4)
+ 1ec:	01d7c793          	xor	a5,a5,29
+ 1f0:	01400613          	li	a2,20
+ 1f4:	08c72023          	sw	a2,128(a4)
+ 1f8:	0ad78793          	add	a5,a5,173
+ 1fc:	01500613          	li	a2,21
+ 200:	08c72223          	sw	a2,132(a4)
+ 204:	01e7c793          	xor	a5,a5,30
+ 208:	01600613          	li	a2,22
+ 20c:	08c72423          	sw	a2,136(a4)
+ 210:	0ad78793          	add	a5,a5,173
+ 214:	01700613          	li	a2,23
+ 218:	08c72623          	sw	a2,140(a4)
+ 21c:	01f7c793          	xor	a5,a5,31
+ 220:	01800613          	li	a2,24
+ 224:	08c72823          	sw	a2,144(a4)
+ 228:	0ad78793          	add	a5,a5,173
+ 22c:	01900613          	li	a2,25
+ 230:	00400593          	li	a1,4
+ 234:	00a00813          	li	a6,10
+ 238:	08c72a23          	sw	a2,148(a4)
+ 23c:	0207c793          	xor	a5,a5,32
+ 240:	01a00613          	li	a2,26
+ 244:	08c72c23          	sw	a2,152(a4)
+ 248:	02072423          	sw	zero,40(a4)
+ 24c:	02b72c23          	sw	a1,56(a4)
+ 250:	05072a23          	sw	a6,84(a4)
+ 254:	01b00613          	li	a2,27
+ 258:	0ad78793          	add	a5,a5,173
+ 25c:	08c72e23          	sw	a2,156(a4)
+ 260:	0217c793          	xor	a5,a5,33
+ 264:	01c00613          	li	a2,28
+ 268:	0ac72023          	sw	a2,160(a4)
+ 26c:	0ad78793          	add	a5,a5,173
+ 270:	01d00613          	li	a2,29
+ 274:	0ac72223          	sw	a2,164(a4)
+ 278:	0227c793          	xor	a5,a5,34
+ 27c:	01e00613          	li	a2,30
+ 280:	0ac72623          	sw	a2,172(a4)
+ 284:	0ad78793          	add	a5,a5,173
+ 288:	01f00613          	li	a2,31
+ 28c:	0ac72823          	sw	a2,176(a4)
+ 290:	0237c793          	xor	a5,a5,35
+ 294:	02000613          	li	a2,32
+ 298:	0ac72a23          	sw	a2,180(a4)
+ 29c:	0ad78793          	add	a5,a5,173
+ 2a0:	02100613          	li	a2,33
+ 2a4:	0ac72c23          	sw	a2,184(a4)
+ 2a8:	0247c793          	xor	a5,a5,36
+ 2ac:	02200613          	li	a2,34
+ 2b0:	0ac72e23          	sw	a2,188(a4)
+ 2b4:	0ad78793          	add	a5,a5,173
+ 2b8:	02300613          	li	a2,35
+ 2bc:	0cc72023          	sw	a2,192(a4)
+ 2c0:	0257c793          	xor	a5,a5,37
+ 2c4:	02400613          	li	a2,36
+ 2c8:	0cc72223          	sw	a2,196(a4)
+ 2cc:	0ad78793          	add	a5,a5,173
+ 2d0:	02500613          	li	a2,37
+ 2d4:	0cc72423          	sw	a2,200(a4)
+ 2d8:	0267c793          	xor	a5,a5,38
+ 2dc:	02600613          	li	a2,38
+ 2e0:	0cc72623          	sw	a2,204(a4)
+ 2e4:	0ad78793          	add	a5,a5,173
+ 2e8:	02700613          	li	a2,39
+ 2ec:	0cc72823          	sw	a2,208(a4)
+ 2f0:	0277c793          	xor	a5,a5,39
+ 2f4:	3f002e23          	sw	a6,1020(zero) # 3fc <j>
+ 2f8:	15a78793          	add	a5,a5,346
+ 2fc:	0097c793          	xor	a5,a5,9
+ 300:	40b02023          	sw	a1,1024(zero) # 400 <i>
+ 304:	0fd00513          	li	a0,253
+ 308:	ff600613          	li	a2,-10
+ 30c:	02a7e533          	rem	a0,a5,a0
+ 310:	0a072423          	sw	zero,168(a4)
+ 314:	00c72023          	sw	a2,0(a4)
+ 318:	40f02223          	sw	a5,1028(zero) # 404 <judgeResult>
+ 31c:	00008067          	ret

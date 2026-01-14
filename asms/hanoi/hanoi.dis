@@ -1,0 +1,268 @@
+
+asms/hanoi/hanoi.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00000000 <_start>:
+   0:	00010137          	lui	sp,0x10
+   4:	22c000ef          	jal	230 <main>
+   8:	fe000fa3          	sb	zero,-1(zero) # ffffffff <judgeResult+0xfffffbf7>
+   c:	0000006f          	j	c <_start+0xc>
+
+00000010 <printInt>:
+  10:	40802703          	lw	a4,1032(zero) # 408 <judgeResult>
+  14:	00e54533          	xor	a0,a0,a4
+  18:	0ad50513          	add	a0,a0,173
+  1c:	40a02423          	sw	a0,1032(zero) # 408 <judgeResult>
+  20:	00008067          	ret
+
+00000024 <printStr>:
+  24:	00054703          	lbu	a4,0(a0)
+  28:	02070063          	beqz	a4,48 <printStr+0x24>
+  2c:	40802783          	lw	a5,1032(zero) # 408 <judgeResult>
+  30:	00f747b3          	xor	a5,a4,a5
+  34:	20978793          	add	a5,a5,521
+  38:	40f02423          	sw	a5,1032(zero) # 408 <judgeResult>
+  3c:	00154703          	lbu	a4,1(a0)
+  40:	00150513          	add	a0,a0,1
+  44:	fe0716e3          	bnez	a4,30 <printStr+0xc>
+  48:	00008067          	ret
+
+0000004c <cd>:
+  4c:	fd010113          	add	sp,sp,-48 # ffd0 <judgeResult+0xfbc8>
+  50:	02912223          	sw	s1,36(sp)
+  54:	01812423          	sw	s8,8(sp)
+  58:	02112623          	sw	ra,44(sp)
+  5c:	02812423          	sw	s0,40(sp)
+  60:	03212023          	sw	s2,32(sp)
+  64:	01312e23          	sw	s3,28(sp)
+  68:	01412c23          	sw	s4,24(sp)
+  6c:	01512a23          	sw	s5,20(sp)
+  70:	01612823          	sw	s6,16(sp)
+  74:	01712623          	sw	s7,12(sp)
+  78:	00100793          	li	a5,1
+  7c:	00058c13          	mv	s8,a1
+  80:	00068493          	mv	s1,a3
+  84:	18f50a63          	beq	a0,a5,218 <cd+0x1cc>
+  88:	00060993          	mv	s3,a2
+  8c:	00050a93          	mv	s5,a0
+  90:	00050b13          	mv	s6,a0
+  94:	3f400a13          	li	s4,1012
+  98:	3fc00913          	li	s2,1020
+  9c:	00100b93          	li	s7,1
+  a0:	fffb0b13          	add	s6,s6,-1
+  a4:	00098693          	mv	a3,s3
+  a8:	00048613          	mv	a2,s1
+  ac:	000c0593          	mv	a1,s8
+  b0:	000b0513          	mv	a0,s6
+  b4:	f99ff0ef          	jal	4c <cd>
+  b8:	40802783          	lw	a5,1032(zero) # 408 <judgeResult>
+  bc:	00050713          	mv	a4,a0
+  c0:	000a0893          	mv	a7,s4
+  c4:	06d00813          	li	a6,109
+  c8:	00188893          	add	a7,a7,1
+  cc:	00f847b3          	xor	a5,a6,a5
+  d0:	0008c803          	lbu	a6,0(a7)
+  d4:	20978793          	add	a5,a5,521
+  d8:	fe0818e3          	bnez	a6,c8 <cd+0x7c>
+  dc:	40f02423          	sw	a5,1032(zero) # 408 <judgeResult>
+  e0:	000c4803          	lbu	a6,0(s8)
+  e4:	02080063          	beqz	a6,104 <cd+0xb8>
+  e8:	000c0893          	mv	a7,s8
+  ec:	00f84833          	xor	a6,a6,a5
+  f0:	20980793          	add	a5,a6,521
+  f4:	40f02423          	sw	a5,1032(zero) # 408 <judgeResult>
+  f8:	0018c803          	lbu	a6,1(a7)
+  fc:	00188893          	add	a7,a7,1
+ 100:	fe0816e3          	bnez	a6,ec <cd+0xa0>
+ 104:	00090893          	mv	a7,s2
+ 108:	02000813          	li	a6,32
+ 10c:	00188893          	add	a7,a7,1
+ 110:	00f847b3          	xor	a5,a6,a5
+ 114:	0008c803          	lbu	a6,0(a7)
+ 118:	20978793          	add	a5,a5,521
+ 11c:	fe0818e3          	bnez	a6,10c <cd+0xc0>
+ 120:	40f02423          	sw	a5,1032(zero) # 408 <judgeResult>
+ 124:	0004c803          	lbu	a6,0(s1)
+ 128:	02080063          	beqz	a6,148 <cd+0xfc>
+ 12c:	00048893          	mv	a7,s1
+ 130:	00f84833          	xor	a6,a6,a5
+ 134:	20980793          	add	a5,a6,521
+ 138:	40f02423          	sw	a5,1032(zero) # 408 <judgeResult>
+ 13c:	0018c803          	lbu	a6,1(a7)
+ 140:	00188893          	add	a7,a7,1
+ 144:	fe0816e3          	bnez	a6,130 <cd+0xe4>
+ 148:	017b0a63          	beq	s6,s7,15c <cd+0x110>
+ 14c:	000c0793          	mv	a5,s8
+ 150:	00098c13          	mv	s8,s3
+ 154:	00078993          	mv	s3,a5
+ 158:	f49ff06f          	j	a0 <cd+0x54>
+ 15c:	fffa8a93          	add	s5,s5,-1
+ 160:	000a0813          	mv	a6,s4
+ 164:	06d00593          	li	a1,109
+ 168:	00180813          	add	a6,a6,1
+ 16c:	00f5c7b3          	xor	a5,a1,a5
+ 170:	00084583          	lbu	a1,0(a6)
+ 174:	20978793          	add	a5,a5,521
+ 178:	fe0598e3          	bnez	a1,168 <cd+0x11c>
+ 17c:	40f02423          	sw	a5,1032(zero) # 408 <judgeResult>
+ 180:	0009c583          	lbu	a1,0(s3)
+ 184:	00058e63          	beqz	a1,1a0 <cd+0x154>
+ 188:	00f5c5b3          	xor	a1,a1,a5
+ 18c:	20958793          	add	a5,a1,521
+ 190:	40f02423          	sw	a5,1032(zero) # 408 <judgeResult>
+ 194:	0019c583          	lbu	a1,1(s3)
+ 198:	00198993          	add	s3,s3,1
+ 19c:	fe0596e3          	bnez	a1,188 <cd+0x13c>
+ 1a0:	00090613          	mv	a2,s2
+ 1a4:	02000693          	li	a3,32
+ 1a8:	00160613          	add	a2,a2,1
+ 1ac:	00f6c7b3          	xor	a5,a3,a5
+ 1b0:	00064683          	lbu	a3,0(a2)
+ 1b4:	20978793          	add	a5,a5,521
+ 1b8:	fe0698e3          	bnez	a3,1a8 <cd+0x15c>
+ 1bc:	40f02423          	sw	a5,1032(zero) # 408 <judgeResult>
+ 1c0:	0004c583          	lbu	a1,0(s1)
+ 1c4:	00058e63          	beqz	a1,1e0 <cd+0x194>
+ 1c8:	00f5c5b3          	xor	a1,a1,a5
+ 1cc:	20958793          	add	a5,a1,521
+ 1d0:	40f02423          	sw	a5,1032(zero) # 408 <judgeResult>
+ 1d4:	0014c583          	lbu	a1,1(s1)
+ 1d8:	00148493          	add	s1,s1,1
+ 1dc:	fe0596e3          	bnez	a1,1c8 <cd+0x17c>
+ 1e0:	02c12083          	lw	ra,44(sp)
+ 1e4:	02812403          	lw	s0,40(sp)
+ 1e8:	00170713          	add	a4,a4,1
+ 1ec:	02412483          	lw	s1,36(sp)
+ 1f0:	02012903          	lw	s2,32(sp)
+ 1f4:	01c12983          	lw	s3,28(sp)
+ 1f8:	01812a03          	lw	s4,24(sp)
+ 1fc:	01012b03          	lw	s6,16(sp)
+ 200:	00c12b83          	lw	s7,12(sp)
+ 204:	00812c03          	lw	s8,8(sp)
+ 208:	01570533          	add	a0,a4,s5
+ 20c:	01412a83          	lw	s5,20(sp)
+ 210:	03010113          	add	sp,sp,48
+ 214:	00008067          	ret
+ 218:	40802783          	lw	a5,1032(zero) # 408 <judgeResult>
+ 21c:	00058993          	mv	s3,a1
+ 220:	00000a93          	li	s5,0
+ 224:	3f400a13          	li	s4,1012
+ 228:	3fc00913          	li	s2,1020
+ 22c:	f35ff06f          	j	160 <cd+0x114>
+
+00000230 <main>:
+ 230:	fc010113          	add	sp,sp,-64
+ 234:	04100793          	li	a5,65
+ 238:	00f12423          	sw	a5,8(sp)
+ 23c:	04200793          	li	a5,66
+ 240:	02812c23          	sw	s0,56(sp)
+ 244:	02912a23          	sw	s1,52(sp)
+ 248:	00f12823          	sw	a5,16(sp)
+ 24c:	04300793          	li	a5,67
+ 250:	03212823          	sw	s2,48(sp)
+ 254:	03312623          	sw	s3,44(sp)
+ 258:	03412423          	sw	s4,40(sp)
+ 25c:	03512223          	sw	s5,36(sp)
+ 260:	03612023          	sw	s6,32(sp)
+ 264:	02112e23          	sw	ra,60(sp)
+ 268:	00010623          	sb	zero,12(sp)
+ 26c:	00010a23          	sb	zero,20(sp)
+ 270:	00f12c23          	sw	a5,24(sp)
+ 274:	00010e23          	sb	zero,28(sp)
+ 278:	01010a13          	add	s4,sp,16
+ 27c:	00810a93          	add	s5,sp,8
+ 280:	00000713          	li	a4,0
+ 284:	00a00b13          	li	s6,10
+ 288:	3f400493          	li	s1,1012
+ 28c:	3fc00413          	li	s0,1020
+ 290:	00100913          	li	s2,1
+ 294:	fffb0b13          	add	s6,s6,-1
+ 298:	01810613          	add	a2,sp,24
+ 29c:	000a0693          	mv	a3,s4
+ 2a0:	000a8593          	mv	a1,s5
+ 2a4:	000b0513          	mv	a0,s6
+ 2a8:	da5ff0ef          	jal	4c <cd>
+ 2ac:	40802783          	lw	a5,1032(zero) # 408 <judgeResult>
+ 2b0:	00050713          	mv	a4,a0
+ 2b4:	00048813          	mv	a6,s1
+ 2b8:	06d00613          	li	a2,109
+ 2bc:	00180813          	add	a6,a6,1
+ 2c0:	00f647b3          	xor	a5,a2,a5
+ 2c4:	00084603          	lbu	a2,0(a6)
+ 2c8:	20978793          	add	a5,a5,521
+ 2cc:	fe0618e3          	bnez	a2,2bc <main+0x8c>
+ 2d0:	000ac603          	lbu	a2,0(s5)
+ 2d4:	00060e63          	beqz	a2,2f0 <main+0xc0>
+ 2d8:	000a8813          	mv	a6,s5
+ 2dc:	00180813          	add	a6,a6,1
+ 2e0:	00f647b3          	xor	a5,a2,a5
+ 2e4:	00084603          	lbu	a2,0(a6)
+ 2e8:	20978793          	add	a5,a5,521
+ 2ec:	fe0618e3          	bnez	a2,2dc <main+0xac>
+ 2f0:	00040813          	mv	a6,s0
+ 2f4:	02000613          	li	a2,32
+ 2f8:	00180813          	add	a6,a6,1
+ 2fc:	00f647b3          	xor	a5,a2,a5
+ 300:	00084603          	lbu	a2,0(a6)
+ 304:	20978793          	add	a5,a5,521
+ 308:	fe0618e3          	bnez	a2,2f8 <main+0xc8>
+ 30c:	01814883          	lbu	a7,24(sp)
+ 310:	40f02423          	sw	a5,1032(zero) # 408 <judgeResult>
+ 314:	02088263          	beqz	a7,338 <main+0x108>
+ 318:	00088813          	mv	a6,a7
+ 31c:	01810613          	add	a2,sp,24
+ 320:	00160613          	add	a2,a2,1
+ 324:	00f847b3          	xor	a5,a6,a5
+ 328:	00064803          	lbu	a6,0(a2)
+ 32c:	20978793          	add	a5,a5,521
+ 330:	fe0818e3          	bnez	a6,320 <main+0xf0>
+ 334:	40f02423          	sw	a5,1032(zero) # 408 <judgeResult>
+ 338:	012b0a63          	beq	s6,s2,34c <main+0x11c>
+ 33c:	000a8793          	mv	a5,s5
+ 340:	000a0a93          	mv	s5,s4
+ 344:	00078a13          	mv	s4,a5
+ 348:	f4dff06f          	j	294 <main+0x64>
+ 34c:	06d00693          	li	a3,109
+ 350:	00148493          	add	s1,s1,1
+ 354:	00f6c7b3          	xor	a5,a3,a5
+ 358:	0004c683          	lbu	a3,0(s1)
+ 35c:	20978793          	add	a5,a5,521
+ 360:	fe0698e3          	bnez	a3,350 <main+0x120>
+ 364:	000a4683          	lbu	a3,0(s4)
+ 368:	00068c63          	beqz	a3,380 <main+0x150>
+ 36c:	001a0a13          	add	s4,s4,1
+ 370:	00f6c7b3          	xor	a5,a3,a5
+ 374:	000a4683          	lbu	a3,0(s4)
+ 378:	20978793          	add	a5,a5,521
+ 37c:	fe0698e3          	bnez	a3,36c <main+0x13c>
+ 380:	02000693          	li	a3,32
+ 384:	00140413          	add	s0,s0,1
+ 388:	00f6c7b3          	xor	a5,a3,a5
+ 38c:	00044683          	lbu	a3,0(s0)
+ 390:	20978793          	add	a5,a5,521
+ 394:	fe0698e3          	bnez	a3,384 <main+0x154>
+ 398:	00088e63          	beqz	a7,3b4 <main+0x184>
+ 39c:	01810693          	add	a3,sp,24
+ 3a0:	00168693          	add	a3,a3,1
+ 3a4:	00f8c7b3          	xor	a5,a7,a5
+ 3a8:	0006c883          	lbu	a7,0(a3)
+ 3ac:	20978793          	add	a5,a5,521
+ 3b0:	fe0898e3          	bnez	a7,3a0 <main+0x170>
+ 3b4:	00a70713          	add	a4,a4,10
+ 3b8:	03c12083          	lw	ra,60(sp)
+ 3bc:	03812403          	lw	s0,56(sp)
+ 3c0:	00f747b3          	xor	a5,a4,a5
+ 3c4:	0ad78793          	add	a5,a5,173
+ 3c8:	40f02423          	sw	a5,1032(zero) # 408 <judgeResult>
+ 3cc:	0fd00513          	li	a0,253
+ 3d0:	03412483          	lw	s1,52(sp)
+ 3d4:	03012903          	lw	s2,48(sp)
+ 3d8:	02c12983          	lw	s3,44(sp)
+ 3dc:	02812a03          	lw	s4,40(sp)
+ 3e0:	02412a83          	lw	s5,36(sp)
+ 3e4:	02012b03          	lw	s6,32(sp)
+ 3e8:	02a7e533          	rem	a0,a5,a0
+ 3ec:	04010113          	add	sp,sp,64
+ 3f0:	00008067          	ret
