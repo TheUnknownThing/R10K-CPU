@@ -1,0 +1,56 @@
+
+asms/store_byte_half/store_byte_half.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00000000 <_start>:
+   0:	00010137          	lui	sp,0x10
+   4:	00c000ef          	jal	10 <main>
+   8:	00100073          	ebreak
+   c:	0000006f          	j	c <_start+0xc>
+
+00000010 <main>:
+  10:	0c400713          	li	a4,196
+  14:	01100793          	li	a5,17
+  18:	00f70023          	sb	a5,0(a4)
+  1c:	02200793          	li	a5,34
+  20:	00f700a3          	sb	a5,1(a4)
+  24:	03300793          	li	a5,51
+  28:	00f70123          	sb	a5,2(a4)
+  2c:	04400793          	li	a5,68
+  30:	00f701a3          	sb	a5,3(a4)
+  34:	f8000793          	li	a5,-128
+  38:	00f70223          	sb	a5,4(a4)
+  3c:	07f00793          	li	a5,127
+  40:	00f702a3          	sb	a5,5(a4)
+  44:	00074783          	lbu	a5,0(a4)
+  48:	0bc00693          	li	a3,188
+  4c:	00174583          	lbu	a1,1(a4)
+  50:	00274603          	lbu	a2,2(a4)
+  54:	00374503          	lbu	a0,3(a4)
+  58:	00474803          	lbu	a6,4(a4)
+  5c:	00574303          	lbu	t1,5(a4)
+  60:	12300713          	li	a4,291
+  64:	00e69023          	sh	a4,0(a3)
+  68:	00004737          	lui	a4,0x4
+  6c:	56770713          	add	a4,a4,1383 # 4567 <byte_buf+0x44a3>
+  70:	00e69123          	sh	a4,2(a3)
+  74:	ffff9737          	lui	a4,0xffff9
+  78:	9ab70713          	add	a4,a4,-1621 # ffff89ab <byte_buf+0xffff88e7>
+  7c:	00e69223          	sh	a4,4(a3)
+  80:	0006d883          	lhu	a7,0(a3)
+  84:	010787b3          	add	a5,a5,a6
+  88:	0026d803          	lhu	a6,2(a3)
+  8c:	006787b3          	add	a5,a5,t1
+  90:	0046d703          	lhu	a4,4(a3)
+  94:	011787b3          	add	a5,a5,a7
+  98:	010787b3          	add	a5,a5,a6
+  9c:	00e787b3          	add	a5,a5,a4
+  a0:	00159713          	sll	a4,a1,0x1
+  a4:	00e787b3          	add	a5,a5,a4
+  a8:	00261713          	sll	a4,a2,0x2
+  ac:	00e787b3          	add	a5,a5,a4
+  b0:	00351513          	sll	a0,a0,0x3
+  b4:	00a78533          	add	a0,a5,a0
+  b8:	00008067          	ret
