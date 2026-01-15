@@ -93,7 +93,7 @@ class Commit(Module):
         #     ]
         #     log(log_format, front_entry.pc, *new_regs)
 
-        with Condition(front_entry.is_terminator): 
+        with Condition(need_pop_activelist & front_entry.is_terminator): 
             log("PC=0x{:08X}, x10=0x{:08X}", front_entry.pc, register_file[map_table.read_commit(Bits(5)(10))])
             finish()
 
