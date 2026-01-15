@@ -1,0 +1,100 @@
+
+/workspaces/assassyn_ws/R10K-CPU/asms/test_mulh/test_mulh.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00000000 <_start>:
+   0:	00010137          	lui	sp,0x10
+   4:	00c000ef          	jal	10 <main>
+   8:	fe000fa3          	sb	zero,-1(zero) # ffffffff <main+0xffffffef>
+   c:	0000006f          	j	c <_start+0xc>
+
+00000010 <main>:
+  10:	ff010113          	add	sp,sp,-16 # fff0 <main+0xffe0>
+  14:	00012223          	sw	zero,4(sp)
+  18:	00a00793          	li	a5,10
+  1c:	00f12423          	sw	a5,8(sp)
+  20:	00f12623          	sw	a5,12(sp)
+  24:	00812583          	lw	a1,8(sp)
+  28:	00c12703          	lw	a4,12(sp)
+  2c:	00412603          	lw	a2,4(sp)
+  30:	800007b7          	lui	a5,0x80000
+  34:	02e595b3          	mulh	a1,a1,a4
+  38:	fff7c693          	not	a3,a5
+  3c:	fff00713          	li	a4,-1
+  40:	00b60633          	add	a2,a2,a1
+  44:	00c12223          	sw	a2,4(sp)
+  48:	00d12423          	sw	a3,8(sp)
+  4c:	06400613          	li	a2,100
+  50:	00c12623          	sw	a2,12(sp)
+  54:	00812583          	lw	a1,8(sp)
+  58:	00c12503          	lw	a0,12(sp)
+  5c:	00412603          	lw	a2,4(sp)
+  60:	02a595b3          	mulh	a1,a1,a0
+  64:	00b60633          	add	a2,a2,a1
+  68:	00c12223          	sw	a2,4(sp)
+  6c:	00d12423          	sw	a3,8(sp)
+  70:	00d12623          	sw	a3,12(sp)
+  74:	00812603          	lw	a2,8(sp)
+  78:	00c12583          	lw	a1,12(sp)
+  7c:	00412683          	lw	a3,4(sp)
+  80:	02b61633          	mulh	a2,a2,a1
+  84:	00c686b3          	add	a3,a3,a2
+  88:	00d12223          	sw	a3,4(sp)
+  8c:	00e12423          	sw	a4,8(sp)
+  90:	00e12623          	sw	a4,12(sp)
+  94:	00812603          	lw	a2,8(sp)
+  98:	00c12583          	lw	a1,12(sp)
+  9c:	00412683          	lw	a3,4(sp)
+  a0:	02b61633          	mulh	a2,a2,a1
+  a4:	00c686b3          	add	a3,a3,a2
+  a8:	00d12223          	sw	a3,4(sp)
+  ac:	00f12423          	sw	a5,8(sp)
+  b0:	00f12623          	sw	a5,12(sp)
+  b4:	00812603          	lw	a2,8(sp)
+  b8:	00c12583          	lw	a1,12(sp)
+  bc:	00412683          	lw	a3,4(sp)
+  c0:	02b61633          	mulh	a2,a2,a1
+  c4:	00c686b3          	add	a3,a3,a2
+  c8:	00d12223          	sw	a3,4(sp)
+  cc:	00f12423          	sw	a5,8(sp)
+  d0:	00100693          	li	a3,1
+  d4:	00d12623          	sw	a3,12(sp)
+  d8:	00812603          	lw	a2,8(sp)
+  dc:	00c12583          	lw	a1,12(sp)
+  e0:	00412683          	lw	a3,4(sp)
+  e4:	02b61633          	mulh	a2,a2,a1
+  e8:	00c686b3          	add	a3,a3,a2
+  ec:	00d12223          	sw	a3,4(sp)
+  f0:	00f12423          	sw	a5,8(sp)
+  f4:	00e12623          	sw	a4,12(sp)
+  f8:	00812683          	lw	a3,8(sp)
+  fc:	00c12603          	lw	a2,12(sp)
+ 100:	00412703          	lw	a4,4(sp)
+ 104:	02c696b3          	mulh	a3,a3,a2
+ 108:	00d70733          	add	a4,a4,a3
+ 10c:	00e12223          	sw	a4,4(sp)
+ 110:	00f12423          	sw	a5,8(sp)
+ 114:	00012623          	sw	zero,12(sp)
+ 118:	00812703          	lw	a4,8(sp)
+ 11c:	00c12683          	lw	a3,12(sp)
+ 120:	00412783          	lw	a5,4(sp)
+ 124:	02d71733          	mulh	a4,a4,a3
+ 128:	00e787b3          	add	a5,a5,a4
+ 12c:	00f12223          	sw	a5,4(sp)
+ 130:	00bc67b7          	lui	a5,0xbc6
+ 134:	14e78793          	add	a5,a5,334 # bc614e <main+0xbc613e>
+ 138:	00f12423          	sw	a5,8(sp)
+ 13c:	fac687b7          	lui	a5,0xfac68
+ 140:	04f78793          	add	a5,a5,79 # fac6804f <main+0xfac6803f>
+ 144:	00f12623          	sw	a5,12(sp)
+ 148:	00812703          	lw	a4,8(sp)
+ 14c:	00c12683          	lw	a3,12(sp)
+ 150:	00412783          	lw	a5,4(sp)
+ 154:	02d71733          	mulh	a4,a4,a3
+ 158:	00e787b3          	add	a5,a5,a4
+ 15c:	00f12223          	sw	a5,4(sp)
+ 160:	00412503          	lw	a0,4(sp)
+ 164:	01010113          	add	sp,sp,16
+ 168:	00008067          	ret

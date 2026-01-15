@@ -13,7 +13,9 @@ def sext(value: Value, target_type: DType) -> Value:
     target_bits = target_type.bits
     delta_bits = target_bits - bits
 
-    assert delta_bits > 0
+    assert delta_bits >= 0
+    if delta_bits == 0:
+        return value.bitcast(target_type)
 
     is_negative = value[bits - 1 : bits - 1]
     higher = is_negative.select(
