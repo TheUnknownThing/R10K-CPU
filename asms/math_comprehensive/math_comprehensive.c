@@ -5,7 +5,10 @@ int main() {
     for (i = 0; i <= 100; i++) {
         volatile int num = i * (i + 1);
         volatile int den = (i % 5) + 1;
-        result += num / den;
+        volatile int div = num / den - 2;
+        volatile int final = (i * div) % 4;
+        volatile int shift = (i % 3) + 1;
+        result += (final << shift);
     }
-    return result;
+    return result % 127;
 }
