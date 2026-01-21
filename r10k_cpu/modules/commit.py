@@ -11,11 +11,13 @@ class Commit(Module):
     """Commits instructions from the Active List."""
 
     flush: Array
+    retire_count: Array
 
     def __init__(self):
         super().__init__(ports={})
         self.name = "Commit"
         self.flush = RegArray(Bits(1), 1)
+        self.retire_count = RegArray(Bits(64), 1)
 
     @module.combinational
     def build(
@@ -78,6 +80,13 @@ class Commit(Module):
         )
         need_pop_activelist = front_entry.ready
 
+        next_retire_count = (
+            self.retire_count[0].bitcast(UInt(64)) + UInt(64)(1)
+        ).bitcast(Bits(64))
+        self.retire_count[0] = need_pop_activelist.select(
+            next_retire_count, self.retire_count[0]
+        )
+
         # with Condition(need_pop_activelist):
         #     log_parts = ["PC=0x{:08X}"]
         #     for i in range(32):
@@ -94,7 +103,12 @@ class Commit(Module):
         #     log(log_format, front_entry.pc, *new_regs)
 
         with Condition(need_pop_activelist & front_entry.is_terminator): 
-            log("PC=0x{:08X}, x10=0x{:08X}", front_entry.pc, register_file[map_table.read_commit(Bits(5)(10))])
+            log(
+                "PC=0x{:08X}, x10=0x{:08X}, retire_count={}",
+                front_entry.pc,
+                register_file[map_table.read_commit(Bits(5)(10))],
+                self.retire_count[0].bitcast(UInt(64)),
+            )
             finish()
 
         with Condition(out_branch):
